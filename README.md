@@ -15,6 +15,27 @@ The goal of this project is two-fold:
 - Provide a greater choice of reports through the Report marketplace
 - Enable users to easily customize an existing report and contribute this back to the community
 
+## Instructions
+
+Each report template subdirectory should have the following elements:
+- At least 1 RMarkdown (`.Rmd`) containing the report content
+- `README.md` - describes the report and provides documentation on:
+    - parameters
+    - whether the report is a standard RMarkdown report or something else, e.g. a `flexdashboard`
+    - description of the report output
+    - details around data preparation
+
+Note that your pull request may be rejected if you do not include all of the above information. 
+
+### How to use a report template 
+
+1. Clone this repository to your local machine. 
+2. Select the RMarkdown report template that you would like to use, and copy this to your working analysis directory. 
+3. When you run the report with `wpa::generate_report2()`, provide the path to the template in the argument and all the necessary parameters.
+
+## References
+- https://rstudio.github.io/rstudio-extensions/rmarkdown_templates.html
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
