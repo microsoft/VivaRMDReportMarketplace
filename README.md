@@ -24,8 +24,12 @@ Each report template subdirectory should have the following elements:
     - whether the report is a standard RMarkdown report or something else, e.g. a `flexdashboard`
     - description of the report output
     - details around data preparation
+    - an example of the output report
+    - example snippet for running the report
 
 Note that your pull request may be rejected if you do not include all of the above information. 
+
+See `minimal-example` in this repository for an example.
 
 ### How to use a report template 
 
