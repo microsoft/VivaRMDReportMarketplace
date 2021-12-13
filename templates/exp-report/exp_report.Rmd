@@ -62,6 +62,7 @@ library(flexdashboard)
 
 expi_df <- params$data # Employee Experience Custom Query
 hrvar_str <- params$hrvar
+mingroup <- params$mingroup
 
 source("create_expi.R")
 source("vis_exp.R")
@@ -72,7 +73,10 @@ expi_list <-
          Meeting_hours_for_2_attendees = "Meeting_hours_1_on_1"
          ) %>%
   totals_bind(target_col = hrvar_str) %>% # Add Total
-  create_expi(hrvar = hrvar_str, return = "list")
+  create_expi(
+    hrvar = hrvar_str,
+    mingroup = mingroup,
+    return = "list")
 
 expi_out <- expi_list[["standard"]] # component
 
@@ -499,6 +503,14 @@ long_tb %>%
 short_tb %>%
   set_names(nm = gsub(pattern = "EXPI_", replacement = "", x = names(.))) %>%
   create_dt(rounding = 2)
+```
+
+### Table - 3
+
+```{r echo=FALSE}
+expi_df %>%
+  hrvar_count(hrvar = hrvar_str, return = "table") %>%
+  create_dt(rounding = 0)
 ```
 
 ### Notes

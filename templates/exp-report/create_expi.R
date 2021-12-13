@@ -1,19 +1,31 @@
 #' @title Create Employee Experience Index from Person Query grouped by Day
 #'
 #' @param data Data frame containing a Standard Person Query grouped by Day.
+#' @param hrvar String containing the grouping HR variable.
+#' @param mingroup Numeric variable specifying the minimum group size.
 #'
 #' @details
 #' Function still under development.
 #' Some `data.table` syntax is used to speed up performance when running daily
 #' data.
 #'
-create_expi <- function(data, hrvar, return = "standard"){
+create_expi <- function(data, hrvar, mingroup, return = "standard"){
 
   # HR lookup ---------------------------------------------------------------
 
   # For joining later
 
   hr_df <- data %>% select(PersonId, !!sym(hrvar))
+
+  # Pass string ------------------------------------------------------------
+  # Find groups which exceed the minimum group size
+
+  pass_str <-
+    data %>%
+    group_by(!!sym(hrvar)) %>%
+    summarise(n = n_distinct(PersonId)) %>%
+    filter(n >= mingroup) %>%
+    pull(!!sym(hrvar))
 
   # Daily metrics -----------------------------------------------------------
 
@@ -252,6 +264,7 @@ create_expi <- function(data, hrvar, return = "standard"){
       hr_df,
       by = "PersonId"
     ) %>%
+    filter(!!sym(hrvar) %in% pass_str) %>%
     group_by(!!sym(hrvar)) %>%
     summarise(
       across(
@@ -268,6 +281,7 @@ create_expi <- function(data, hrvar, return = "standard"){
       hr_df,
       by = "PersonId"
     ) %>%
+    filter(!!sym(hrvar) %in% pass_str) %>%
     group_by(!!sym(hrvar)) %>%
     summarise(
       across(
