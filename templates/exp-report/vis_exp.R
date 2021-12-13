@@ -65,12 +65,12 @@ vis_exp <- function(x,
 
   pre_plot_df_1 <-
     long_data %>%
-    left_join(bar_data_1, by = "full_name_4") %>%
+    left_join(bar_data_1, by = hrvar) %>%
     add_component() %>%
     mutate(EXP = gsub(pattern = "EXPI_", replacement = "", x = EXP),
            EXP = camel_clean(EXP)
     ) %>%
-    group_by(full_name_4) %>%
+    group_by(!!sym(hrvar)) %>%
     mutate(text = case_when(
       values == max(values) ~ "top",
       values == min(values) ~ "bottom",
@@ -133,7 +133,7 @@ vis_exp <- function(x,
       size = 0.5) +
     scale_y_continuous(
       breaks = unique(bar_data_1$id),
-      labels = unique(bar_data_1[["full_name_4"]])
+      labels = unique(bar_data_1[[hrvar]])
     ) +
     geom_jitter(
       aes(colour = Component),

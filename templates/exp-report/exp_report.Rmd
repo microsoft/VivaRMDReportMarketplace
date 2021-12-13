@@ -61,6 +61,7 @@ library(data.table)
 library(flexdashboard)
 
 expi_df <- params$data # Employee Experience Custom Query
+hrvar_str <- params$hrvar
 
 source("create_expi.R")
 source("vis_exp.R")
@@ -70,23 +71,23 @@ expi_list <-
   rename(Meeting_hours_for_3_to_8_attendees = "Meeting_hours_3_to_8",
          Meeting_hours_for_2_attendees = "Meeting_hours_1_on_1"
          ) %>%
-  totals_bind(target_col = "full_name_4") %>% # Add Total
-  create_expi(hrvar = "full_name_4", return = "list")
+  totals_bind(target_col = hrvar_str) %>% # Add Total
+  create_expi(hrvar = hrvar_str, return = "list")
 
 expi_out <- expi_list[["standard"]] # component
 
 expi_out_2 <- expi_list[["kc"]] # key component
 
 # component summary
-short_tb <- expi_list[["cs"]] %>% totals_reorder(target_col = "full_name_4") 
+short_tb <- expi_list[["cs"]] %>% totals_reorder(target_col = hrvar_str) 
 
 # key component summary
-long_tb <- expi_list[["kcs"]] %>% totals_reorder(target_col = "full_name_4") 
+long_tb <- expi_list[["kcs"]] %>% totals_reorder(target_col = hrvar_str) 
 
 # summary table
 sum_tb <-
   long_tb %>%
-  filter(full_name_4 == "Total") %>%
+  filter(!!sym(hrvar_str) == "Total") %>%
   select(-EXPI) %>%
   pivot_longer(cols = starts_with("EX_KPI_"),
                names_to = "EXP",
@@ -135,7 +136,7 @@ Row
   gauge(
       value = 
         long_tb %>%
-        filter(full_name_4 == "Total") %>%
+        filter(!!sym(hrvar_str) == "Total") %>%
         mutate(EXPI = round(EXPI * 100)) %>%
         pull(EXPI), 
       min = 0,
@@ -236,7 +237,7 @@ long_tb %>%
                                  "Purpose")
   )) %>%
   ggplot(aes(x = EXP,
-             y = full_name_4,
+             y = !!sym(hrvar_str),
              fill = values)) +
   geom_tile(colour = "#FFFFFF",
             size = 2) +
@@ -257,24 +258,13 @@ long_tb %>%
   theme_wpa_basic() +
   theme(axis.line = element_line(color = "#FFFFFF")) +
   labs(title = "Employee Experience",
-       subtitle = "Baseline by `full_name_4`",
+       subtitle = paste("Baseline by", hrvar_str),
        y =" ",
        x =" ",
        fill = " ",
        caption = extract_date_range(expi_df, return = "text")) +
   theme(axis.text.x = element_blank(), # already covered by facet
         plot.title = element_text(color="grey40", face="bold", size=20))
-
-# long_tb %>%
-#   create_bar_asis(
-#     group_var = "full_name_4",
-#     bar_var = "EXPI",
-#     title = "Employee Experience Baseline",
-#     subtitle = "Aggregated",
-#     caption = extract_date_range(expi_df, return = "text"),
-#     bar_colour = "darkblue",
-#     percent = TRUE)
-
 ```
 
 Column {.sidebar data-width=300}
@@ -332,7 +322,7 @@ short_tb %>%
   mutate(EXP = replN(x = EXP, fn = " ", rp = "\n", n = 2)) %>%
   # mutate(EXP = gsub(pattern = " ", replacement = "\n", x = EXP)) %>%
   ggplot(aes(x = EXP,
-             y = full_name_4,
+             y = !!sym(hrvar_str),
              fill = values)) +
   geom_tile(colour = "#FFFFFF",
             size = 2) +
@@ -354,7 +344,7 @@ short_tb %>%
   theme(axis.line = element_line(color = "#FFFFFF")) +
   labs(
     title = "Employee Experience",
-    subtitle = "KPIs by `full_name_4`",
+    subtitle = paste("KPIs by", hrvar_str),
     y = " ",
     x = " ",
     fill = " ",
@@ -396,7 +386,7 @@ Row {data-height=95%}
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-vis_list <- vis_exp(x = expi_list, hrvar = "full_name_4")
+vis_list <- vis_exp(x = expi_list, hrvar = hrvar_str)
 
 vis_list[["plot_1"]]
 
