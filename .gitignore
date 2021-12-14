@@ -37,3 +37,7 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+*.R
+templates/exp-report/exp report testing only.html
+templates/exp-report/exp report.html
+templates/exp-report/*.csv

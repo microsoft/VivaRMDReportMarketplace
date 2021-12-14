@@ -1,0 +1,525 @@
+---
+params:
+  data: data
+  set_title: report_title
+  hrvar: hrvar
+  mingroup: mingroup
+title: "Org Insights | Employee Experience Report"
+# output:
+#  flexdashboard::flex_dashboard:
+#    orientation: rows
+#    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  fig.height = 9,
+  fig.width = 16,
+  message = FALSE,
+  warning = FALSE
+  )
+```
+
+<style>
+.navbar {
+  background-color: rgb(47,85,151);
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: Arial;
+  font-weight: 300;
+  line-height: 1.1;
+  color: inherit;
+}
+
+body {
+  font-family: Arial;
+  font-size: 12px;
+  line-height: 1.42857143;
+  color: #333333;
+  background-color: #FFFFFF;
+}
+</style>
+
+```{js, echo=FALSE}
+var scale = 'scale(1)';
+document.body.style.webkitTransform = scale; // Chrome, Opera, Safari
+document.body.style.msTransform = scale; // IE 9
+document.body.style.transform = scale; // General
+```
+
+Introduction
+=====================================
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+start_time <- Sys.time() # timestamp
+
+library(tidyverse)
+library(wpa)
+library(data.table)
+library(flexdashboard)
+
+expi_df <- params$data # Employee Experience Custom Query
+hrvar_str <- params$hrvar
+mingroup <- params$mingroup
+
+source("create_expi.R")
+source("vis_exp.R")
+
+expi_list <-
+  expi_df %>%
+  rename(Meeting_hours_for_3_to_8_attendees = "Meeting_hours_3_to_8",
+         Meeting_hours_for_2_attendees = "Meeting_hours_1_on_1"
+         ) %>%
+  totals_bind(target_col = hrvar_str) %>% # Add Total
+  create_expi(
+    hrvar = hrvar_str,
+    mingroup = mingroup,
+    return = "list")
+
+expi_out <- expi_list[["standard"]] # component
+
+expi_out_2 <- expi_list[["kc"]] # key component
+
+# component summary
+short_tb <- expi_list[["cs"]] %>% totals_reorder(target_col = hrvar_str) 
+
+# key component summary
+long_tb <- expi_list[["kcs"]] %>% totals_reorder(target_col = hrvar_str) 
+
+# summary table
+sum_tb <-
+  long_tb %>%
+  filter(!!sym(hrvar_str) == "Total") %>%
+  select(-EXPI) %>%
+  pivot_longer(cols = starts_with("EX_KPI_"),
+               names_to = "EXP",
+               values_to = "values") %>%
+  mutate(EXP = gsub(pattern = "EX_KPI_", replacement = "", x = EXP)) %>%
+  mutate(EXP = factor(EXP,
+                      levels = c("Wellbeing",
+                                 "Empowerment",
+                                 "Connection",
+                                 "Growth",
+                                 "Focus",
+                                 "Purpose")
+  ))
+
+create_gauge <- function(filt){
+    gauge(
+      value = round(sum_tb$values[sum_tb$EXP == filt] * 100), 
+      min = 0,
+      max = 100, 
+      symbol = '%', 
+      label = filt,
+      gaugeSectors(
+        success = c(80, 100),
+        warning = c(40, 79), 
+        danger = c(0, 39)
+  ))
+}
+```
+
+### jumbotron {.no-title}
+
+```{r results='asis'}
+xfun::file_string("jumbotron.html")
+```
+
+
+Overview {data-orientation=rows}
+=====================================  
+
+Row
+-------------------------------------
+
+### Total
+
+```{r}
+  gauge(
+      value = 
+        long_tb %>%
+        filter(!!sym(hrvar_str) == "Total") %>%
+        mutate(EXPI = round(EXPI * 100)) %>%
+        pull(EXPI), 
+      min = 0,
+      max = 100, 
+      symbol = '%', 
+      label = "EXP Baseline",
+      gaugeSectors(
+        success = c(80, 100),
+        warning = c(40, 79), 
+        danger = c(0, 39)
+  ))
+```
+
+Row
+-------------------------------------
+
+### Wellbeing
+
+```{r}
+create_gauge(filt = "Wellbeing")
+```
+
+### Empowerment
+
+```{r}
+create_gauge(filt = "Empowerment")
+```
+
+### Connection
+
+```{r}
+create_gauge(filt = "Connection")
+```
+
+Row
+-------------------------------------
+
+### Growth
+
+```{r}
+create_gauge(filt = "Growth")
+```
+
+### Focus
+
+```{r}
+create_gauge(filt = "Focus")
+```
+
+### Purpose
+
+```{r}
+create_gauge(filt = "Purpose")
+```
+
+Column {.sidebar data-width=300}
+-------------------------------------
+
+### Definitions
+
+```{r}
+preamble_md <- readLines("exp_preamble.md",
+                         encoding = "UTF-8")
+
+wpa:::md2html(preamble_md)
+```
+
+
+Baseline
+=====================================  
+
+Row {data-height=5%}
+-------------------------------------
+
+### Title-Placeholder  {.no-title}
+
+```{r  results = 'asis'}
+wpa:::md2html("## Which teams could use further support to improve overall employee experience?")
+```
+
+Row {data-height=95%}
+-------------------------------------
+### Baseline 
+
+```{r echo=FALSE}
+long_tb %>%
+  select(-EXPI) %>%
+  pivot_longer(cols = starts_with("EX_KPI_"),
+               names_to = "EXP",
+               values_to = "values") %>%
+  mutate(EXP = gsub(pattern = "EX_KPI_", replacement = "", x = EXP)) %>%
+  mutate(EXP = factor(EXP,
+                      levels = c("Wellbeing",
+                                 "Empowerment",
+                                 "Connection",
+                                 "Growth",
+                                 "Focus",
+                                 "Purpose")
+  )) %>%
+  ggplot(aes(x = EXP,
+             y = !!sym(hrvar_str),
+             fill = values)) +
+  geom_tile(colour = "#FFFFFF",
+            size = 2) +
+  geom_text(aes(label = scales::percent(values, accuracy = 1)),
+            size = 3) +
+  # Fill is contingent on max-min scaling
+  scale_fill_gradient2(low = rgb2hex(204, 50, 50),
+                       mid = rgb2hex(231, 180, 22),
+                       high = rgb2hex(45, 201, 55),
+                       midpoint = 0.5,
+                       breaks = c(0, 0.5, 1),
+                       labels = c("Low", "", "High"),
+                       limits = c(0, 1)) +
+  scale_x_discrete(position = "top") +
+  scale_y_discrete(labels = us_to_space) +
+  facet_grid(. ~ EXP,
+             scales = "free") +  
+  theme_wpa_basic() +
+  theme(axis.line = element_line(color = "#FFFFFF")) +
+  labs(title = "Employee Experience",
+       subtitle = paste("Baseline by", hrvar_str),
+       y =" ",
+       x =" ",
+       fill = " ",
+       caption = extract_date_range(expi_df, return = "text")) +
+  theme(axis.text.x = element_blank(), # already covered by facet
+        plot.title = element_text(color="grey40", face="bold", size=20))
+```
+
+Column {.sidebar data-width=300}
+-------------------------------------
+
+### Definitions
+
+```{r}
+intro_md <- readLines("components.md")
+
+wpa:::md2html(intro_md)
+```
+
+KPIs
+=====================================  
+
+Row {data-height=5%}
+-------------------------------------
+
+### Title-Placeholder  {.no-title}
+
+```{r  results = 'asis'}
+wpa:::md2html("## Which underlying behaviours are impacting the employee experience pillar scores?")
+```
+
+Row {data-height=95%}
+-------------------------------------
+
+### KPIs
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+## reg matching nth occurrence
+# a <- "1, 2, 3, 4, 5, 6, 7, 8, 9, 10"
+# fn <- ","
+# rp <- "\n"
+# n <- 4
+
+replN <- function(x, fn, rp, n) {
+    regmatches(x, gregexpr(fn, x)) <- list(c(rep(fn,n-1),rp))
+    x
+}
+# replN(a, ",", "\n", 4)
+#[1] "1, 2, 3, 4\n 5, 6, 7, 8\n 9, 10
+
+short_tb %>%
+  select(-EXPI) %>%
+  pivot_longer(cols = starts_with("EXPI_"),
+               names_to = "EXP",
+               values_to = "values") %>%
+  order_exp() %>%
+  add_component() %>%
+  mutate(EXP = gsub(pattern = "EXPI_", replacement = "", x = EXP)) %>%
+  mutate(EXP = camel_clean(EXP)) %>%
+  mutate(EXP = replN(x = EXP, fn = " ", rp = "\n", n = 2)) %>%
+  # mutate(EXP = gsub(pattern = " ", replacement = "\n", x = EXP)) %>%
+  ggplot(aes(x = EXP,
+             y = !!sym(hrvar_str),
+             fill = values)) +
+  geom_tile(colour = "#FFFFFF",
+            size = 2) +
+  geom_text(aes(label = scales::percent(values, accuracy = 1)),
+            size = 3) +
+  # Fill is contingent on max-min scaling
+  scale_fill_gradient2(low = rgb2hex(204, 50, 50),
+                       mid = rgb2hex(231, 180, 22),
+                       high = rgb2hex(45, 201, 55),
+                       midpoint = 0.5,
+                       breaks = c(0, 0.5, 1),
+                       labels = c("Low", "", "High"),
+                       limits = c(0, 1)) +
+  scale_x_discrete(position = "top") +
+  scale_y_discrete(labels = us_to_space) +
+  facet_grid(. ~ Component,
+             scales = "free") +
+  theme_wpa_basic() +
+  theme(axis.line = element_line(color = "#FFFFFF")) +
+  labs(
+    title = "Employee Experience",
+    subtitle = paste("KPIs by", hrvar_str),
+    y = " ",
+    x = " ",
+    fill = " ",
+    caption = extract_date_range(expi_df, return = "text")
+    ) +
+  theme(
+    axis.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 60, hjust = 0),
+    plot.title = element_text(color="grey40", face="bold", size=20)
+    )
+```
+
+Column {.sidebar data-width=300}
+-------------------------------------
+
+### Definitions
+
+```{r}
+wpa:::md2html(intro_md)
+```
+
+
+Opportunities
+=====================================  
+
+Row {data-height=5%}
+-------------------------------------
+
+### Title-Placeholder  {.no-title}
+
+```{r  results = 'asis'}
+wpa:::md2html("## What are the behavioural opportunities for growth within each team?")
+```
+
+Row {data-height=95%}
+-------------------------------------
+
+### Opportunities
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+vis_list <- vis_exp(x = expi_list, hrvar = hrvar_str)
+
+vis_list[["plot_1"]]
+
+```
+
+Column {.sidebar data-width=300}
+-------------------------------------
+
+### Definitions
+
+```{r}
+wpa:::md2html(intro_md)
+```
+
+
+Distribution
+=====================================  
+
+Row {data-height=5%}
+-------------------------------------
+
+### Title-Placeholder  {.no-title}
+
+```{r  results = 'asis'}
+wpa:::md2html("## Are employees within individual teams sharing a broadly uniform experience?")
+```
+
+Row {data-height=95%}
+-------------------------------------
+
+### Distribution
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+vis_list[["plot_2"]]
+
+```
+
+Column {.sidebar data-width=300}
+-------------------------------------
+
+### Definitions
+
+```{r}
+wpa:::md2html(intro_md)
+```
+
+Notes
+=====================================  
+
+Column {data-height=650} {.tabset}
+-------------------------------------
+
+### Query Spec
+
+#### Specifications
+
+Run a single daily person query: 
+
+- Group by `Day`
+- At least 3 months
+- Ensure that `IsActive` flag is not applied
+
+
+#### All metrics
+
+**Note**: _Custom metrics shown in **bolded italics**_
+
+1. **_Meeting hours 1 on 1_** [SEE SPEC BELOW]
+1. **_Meeting hours 1 on 1 with same level_** [SEE SPEC BELOW]
+1. Time in self organized meetings
+1. Open 2 hour blocks
+1. Collaboration hours external
+1. Meetings with skip level
+1. Meeting hours with skip level
+1. ***Meeting hours 3 to 8*** [SEE SPEC BELOW]
+1. Internal network size
+1. Meeting hours with manager
+1. Meeting hours
+1. Meetings
+1. Meetings with manager
+1. Meeting hours with manager 1 on 1
+1. Instant messages sent
+1. Emails sent
+1. Workweek span
+1. Collaboration hours
+1. ***Meeting hours with skip level max 8*** [SEE SPEC BELOW]
+1. ***Meeting hours with manager with 3 to 8*** [SEE SPEC BELOW]
+
+
+#### Custom metrics
+
+1. Meeting Hours 1 on 1: where `Total attendees == 2`
+1. Meeting Hours 1 on 1 with same level: `All attendee's and/or recipient's` where `LevelDesignation == @RelativeToPerson` AND `Total attendees == 2`
+1. Meeting hours 3 to 8: `Total attendees >= 3` AND `Total attendees <= 8`
+1. Meeting hours with skip level max 8:  `Total attendees <= 8`, using `Meeting hours with skip level`. 
+1. Meeting hours with manager 3 to 8:  `Total attendees >= 3` AND `Total attendees <= 8`, using `Meeting hours with manager`. This is used to calculate **small group meetings without manager** by deducting this from `Meeting hours for 3 to 8 attendees`.
+
+### Table - 1
+
+```{r echo=FALSE}
+long_tb %>%
+  set_names(nm = gsub(pattern = "EX_KPI_", replacement = "", x = names(.))) %>%
+  create_dt(rounding = 2)
+```
+
+### Table - 2
+
+```{r echo=FALSE}
+short_tb %>%
+  set_names(nm = gsub(pattern = "EXPI_", replacement = "", x = names(.))) %>%
+  create_dt(rounding = 2)
+```
+
+### Table - 3
+
+```{r echo=FALSE}
+expi_df %>%
+  hrvar_count(hrvar = hrvar_str, return = "table") %>%
+  create_dt(rounding = 0)
+```
+
+### Notes
+
+```{r}
+end_time <- Sys.time()
+text1 <- paste("This report was generated on ", format(Sys.time(), "%b %d %Y"), ".") 
+text2 <- expi_df %>% check_query(return = "text", validation = TRUE) 
+text3 <- paste("Total Runtime was: ", difftime(end_time, start_time, units = "mins") %>%
+                 round(2), "minutes.")
+paste(text1, text2, text3, sep = "\n\n" )%>% wpa:::md2html() 
+```
