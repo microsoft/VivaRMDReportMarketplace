@@ -1,0 +1,202 @@
+Page 2
+=====================================
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### Average day span
+
+```{r}
+p_data %>%
+  # filter(!(DayOfWeek %in% c("Saturday", "Sunday"))) %>%
+  create_bar(
+    metric = "Workweek_span", # Day span
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`Workweek_span`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average day span"
+)
+```
+
+### Average collaboration hours
+
+```{r}
+p_data %>%
+  create_bar(
+    metric = "Collaboration_hours", 
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`Collaboration_hours`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average daily collaboration hours"
+)
+```
+
+### Average after hours
+
+```{r}
+p_data %>%
+  create_bar(
+    metric = "After_hours_collaboration_hours", 
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`After_hours_collaboration_hours`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average daily after hours"
+)
+```
+
+### Time to disconnect per day
+
+```{r}
+p_data %>%
+  mutate(Day_Span = Workweek_span) %>%
+  mutate(`Disconnected hours per day` = 24 - Day_Span) %>%
+  create_bar(
+    metric = "Disconnected hours per day",
+    hrvar = hrvar_str
+    )
+```
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### Average day span
+
+```{r}
+p_data %>%
+  # filter(!(DayOfWeek %in% c("Saturday", "Sunday"))) %>%
+  create_bar(
+    metric = "Workweek_span", # Day span
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`Workweek_span`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average day span"
+)
+```
+
+### Average collaboration hours
+
+```{r}
+p_data %>%
+  create_bar(
+    metric = "Collaboration_hours", 
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`Collaboration_hours`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average daily collaboration hours"
+)
+```
+
+### Average after hours
+
+```{r}
+p_data %>%
+  create_bar(
+    metric = "After_hours_collaboration_hours", 
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`After_hours_collaboration_hours`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average daily after hours"
+)
+```
+
+### Day span
+
+```{r}
+p_data %>%
+  mutate(Workweek_span) %>%
+  create_bar(
+    metric = "Workweek_span",
+    hrvar = hrvar_str
+    )
+```
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### Average day span
+
+```{r}
+p_data %>%
+  # filter(!(DayOfWeek %in% c("Saturday", "Sunday"))) %>%
+  create_bar(
+    metric = "Workweek_span", # Day span
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`Workweek_span`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average day span"
+)
+```
+
+### Average collaboration hours
+
+```{r}
+p_data %>%
+  create_bar(
+    metric = "Collaboration_hours", 
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`Collaboration_hours`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average daily collaboration hours"
+)
+```
+
+### Average after hours
+
+```{r}
+p_data %>%
+  create_bar(
+    metric = "After_hours_collaboration_hours", 
+    hrvar = NULL,
+    return = "table"
+    ) %>%
+  dplyr::pull(`After_hours_collaboration_hours`) %>%
+  round(digits = 1) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "Average daily after hours"
+)
+```
+
+### Working hours per day
+
+```{r}
+p_data %>%
+  mutate(`Daily Collaboration Hours` = Collaboration_hours) %>%
+  create_bar(
+    metric = "Daily Collaboration Hours",
+    hrvar = hrvar_str
+    )
+```
+

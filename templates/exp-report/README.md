@@ -9,6 +9,7 @@ The following parameters describe the arguments that will be passed to within th
 - `mingroup`: numeric value specifying the minimum group size to filter the data by.
 
 ## Report Type
+
 This is a **flexdashboard** RMarkdown report.
 
 The standard YAML header would be as follows:

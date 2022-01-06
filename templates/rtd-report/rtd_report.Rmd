@@ -1,0 +1,52 @@
+---
+params:
+  data: data
+  set_title: report_title
+  hrvar: hrvar
+  mingroup: mingroup
+  min_activity: min_activity
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  # fig.height = 9,
+  # fig.width = 16,
+  message = FALSE,
+  warning = FALSE
+  )
+```
+
+```{r include=FALSE}
+library(wpa)
+library(dplyr)
+library(lubridate)
+library(flexdashboard)
+
+## parameter setting
+p_data <- params$data # Standard Person Query, grouped by day
+hrvar_str <- params$hrvar
+mingroup <- params$mingroup
+min_activity <- params$min_activity
+
+p_data <-
+  p_data %>%
+  mutate(DayOfWeek = lubridate::wday(Date, label = TRUE, abbr = FALSE) %>%
+           factor(levels = rev(
+             c(
+               "Sunday",
+               "Monday",
+               "Tuesday",
+               "Wednesday",
+               "Thursday",
+               "Friday",
+               "Saturday"
+             )
+           ))) %>%
+  filter(Emails_sent >= min_activity | Instant_messages_sent >= min_activity)
+```
+
+
+```{r child="page_2.Rmd"}
+```
