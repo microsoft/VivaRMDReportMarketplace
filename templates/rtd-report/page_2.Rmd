@@ -7,65 +7,58 @@ Column {data-width=33%}
 ### Average day span
 
 ```{r}
-p_data %>%
-  # filter(!(DayOfWeek %in% c("Saturday", "Sunday"))) %>%
-  create_bar(
-    metric = "Workweek_span", # Day span
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`Workweek_span`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average day span"
-)
+
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Workweek_span",
+  title = "Average working day span",
+  grid_fill = rgb2hex(r = 1, g = 92, b = 85)
+  )
+
 ```
+
+### Average day span 
+
+```{r}
+
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Workweek_span",
+  title = "Day span",
+  return = "table"
+  ) %>%
+  knitr::kable()
+
+```
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
 
 ### Average collaboration hours
 
 ```{r}
-p_data %>%
-  create_bar(
-    metric = "Collaboration_hours", 
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`Collaboration_hours`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average daily collaboration hours"
-)
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Collaboration_hours",
+  title = "Average collaboration hours",
+  grid_fill = rgb2hex(r = 1, g = 184, b = 170)
+  )
 ```
 
-### Average after hours
+### Average collaboration hours 
 
 ```{r}
-p_data %>%
-  create_bar(
-    metric = "After_hours_collaboration_hours", 
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`After_hours_collaboration_hours`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average daily after hours"
-)
-```
-
-### Time to disconnect per day
-
-```{r}
-p_data %>%
-  mutate(Day_Span = Workweek_span) %>%
-  mutate(`Disconnected hours per day` = 24 - Day_Span) %>%
-  create_bar(
-    metric = "Disconnected hours per day",
-    hrvar = hrvar_str
-    )
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Collaboration_hours",
+  title = "Collaboration hours",
+  return = "table"
+  ) %>%
+  knitr::kable()
 ```
 
 Column {data-width=33%}
@@ -74,129 +67,25 @@ Column {data-width=33%}
 ### Average day span
 
 ```{r}
-p_data %>%
-  # filter(!(DayOfWeek %in% c("Saturday", "Sunday"))) %>%
-  create_bar(
-    metric = "Workweek_span", # Day span
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`Workweek_span`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average day span"
-)
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "After_hours_collaboration_hours",
+  title = "Average after hours",
+  grid_fill = rgb2hex(r = 253, g = 98, b = 94)
+  )
 ```
 
-### Average collaboration hours
+### Average day span 
 
 ```{r}
-p_data %>%
-  create_bar(
-    metric = "Collaboration_hours", 
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`Collaboration_hours`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average daily collaboration hours"
-)
-```
-
-### Average after hours
-
-```{r}
-p_data %>%
-  create_bar(
-    metric = "After_hours_collaboration_hours", 
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`After_hours_collaboration_hours`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average daily after hours"
-)
-```
-
-### Day span
-
-```{r}
-p_data %>%
-  mutate(Workweek_span) %>%
-  create_bar(
-    metric = "Workweek_span",
-    hrvar = hrvar_str
-    )
-```
-
-Column {data-width=33%}
-----------------------------------------------------------------------------
-
-### Average day span
-
-```{r}
-p_data %>%
-  # filter(!(DayOfWeek %in% c("Saturday", "Sunday"))) %>%
-  create_bar(
-    metric = "Workweek_span", # Day span
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`Workweek_span`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average day span"
-)
-```
-
-### Average collaboration hours
-
-```{r}
-p_data %>%
-  create_bar(
-    metric = "Collaboration_hours", 
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`Collaboration_hours`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average daily collaboration hours"
-)
-```
-
-### Average after hours
-
-```{r}
-p_data %>%
-  create_bar(
-    metric = "After_hours_collaboration_hours", 
-    hrvar = NULL,
-    return = "table"
-    ) %>%
-  dplyr::pull(`After_hours_collaboration_hours`) %>%
-  round(digits = 1) %>%
-  flexdashboard::valueBox(
-    value = .,
-    caption = "Average daily after hours"
-)
-```
-
-### Working hours per day
-
-```{r}
-p_data %>%
-  mutate(`Daily Collaboration Hours` = Collaboration_hours) %>%
-  create_bar(
-    metric = "Daily Collaboration Hours",
-    hrvar = hrvar_str
-    )
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "After_hours_collaboration_hours",
+  title = "After hours",
+  return = "table"
+  ) %>%
+  knitr::kable()
 ```
 
