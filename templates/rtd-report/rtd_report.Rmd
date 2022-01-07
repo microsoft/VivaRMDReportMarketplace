@@ -6,6 +6,7 @@ params:
   mingroup: mingroup
   min_activity: min_activity
 date: "`r Sys.Date()`"
+title: "`r params$set_title`"  
 ---
 
 ```{r setup, include=FALSE}
