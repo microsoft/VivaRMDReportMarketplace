@@ -56,3 +56,6 @@ source("auxiliary.R")
 
 ```{r child="page_2.Rmd"}
 ```
+
+```{r child="channels.Rmd"}
+```
