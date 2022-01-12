@@ -45,17 +45,26 @@ p_data <-
                "Saturday"
              )
            )) %>%
-  filter(Emails_sent >= min_activity | Instant_messages_sent >= min_activity)
+  filter(Emails_sent >= min_activity | Instant_messages_sent >= min_activity) 
+
+# Order by high to low
+hrvar_order <-
+  p_data %>%
+  workloads_sum(hrvar = "Site", return = "table", mingroup = 0) %>%
+  arrange(desc(Workweek_span)) %>%
+  dplyr::pull(group)
+
+p_data[[hrvar_str]] <- factor(p_data[[hrvar_str]], levels = rev(hrvar_order))
 
 source("auxiliary.R")
 
 ```
 
-```{r child="overview.Rmd"}
+```{r child="pages/overview.Rmd"}
 ```
 
-```{r child="page_2.Rmd"}
+```{r child="pages/page_2.Rmd"}
 ```
 
-```{r child="channels.Rmd"}
+```{r child="pages/channels.Rmd"}
 ```
