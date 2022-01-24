@@ -1,14 +1,9 @@
 ---
 params:
   data: data
-  set_title: report_title
   hrvar: hrvar
   mingroup: mingroup
 title: "Org Insights | Employee Experience Report"
-# output:
-#  flexdashboard::flex_dashboard:
-#    orientation: rows
-#    vertical_layout: fill
 ---
 
 ```{r setup, include=FALSE}

@@ -1,0 +1,123 @@
+Overview
+=====================================
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### Total employees
+
+```{r}
+p_data %>%
+  pull(PersonId) %>%
+  n_distinct() %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "total employees",
+    color = "info"
+)
+```
+
+### Average working day span
+
+```{r}
+avg_vb(
+  data = p_data,
+  metric = "Workweek_span",
+  round = 1,
+  caption = "Average working day span",
+  fill = rgb2hex(r = 1, g = 92, b = 85)
+  )
+```
+
+### Working Day Span by Day of Week
+
+```{r}
+bar_dow(
+  data = p_data,
+  metric = "Workweek_span",
+  bar_fill = rgb2hex(r = 1, g = 92, b = 85),
+  title = "Working Day Span"
+)
+```
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### Start date
+
+```{r}
+p_data %>%
+  extract_date_range(return = "table") %>%
+  dplyr::pull(Start) %>%
+  # gsub(pattern = "Data from", replacement = "", x = .) %>%
+  # gsub(pattern = "of", replacement = "", x = .) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "",
+    color = rgb2hex(r = 89, g = 89, b = 89)
+)
+```
+
+### Average collaboration hours
+
+```{r}
+avg_vb(
+  data = p_data,
+  metric = "Collaboration_hours",
+  round = 1,
+  caption = "Average daily collaboration hours",
+  fill = rgb2hex(r = 1, g = 184, b = 170)
+  )
+```
+
+
+### Average daily collaboration hours
+
+```{r}
+bar_dow(
+  data = p_data,
+  metric = "Collaboration_hours",
+  bar_fill = rgb2hex(r = 1, g = 184, b = 170),
+  title = "Daily collaboration hours"
+)
+```
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### End date
+
+```{r}
+p_data %>%
+  extract_date_range(return = "table") %>%
+  dplyr::pull(End) %>%
+  flexdashboard::valueBox(
+    value = .,
+    caption = "",
+    color = rgb2hex(r = 89, g = 89, b = 89)
+)
+```
+
+### Average after hours
+
+```{r}
+avg_vb(
+  data = p_data,
+  metric = "After_hours_collaboration_hours",
+  round = 1,
+  caption = "Average daily after hours",
+  fill = rgb2hex(r = 253, g = 98, b = 94)
+  )
+```
+
+### After hours per day
+
+```{r}
+bar_dow(
+  data = p_data,
+  metric = "After_hours_collaboration_hours",
+  bar_fill = rgb2hex(r = 253, g = 98, b = 94),
+  title = "After hours collaboration"
+)
+```
+

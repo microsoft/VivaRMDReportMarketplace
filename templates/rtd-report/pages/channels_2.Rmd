@@ -1,0 +1,56 @@
+Channels - %
+=====================================
+
+Column {data-width=50%}
+----------------------------------------------------------------------------
+
+### Average email hours
+
+```{r}
+bar_dow(
+  data = p_data,
+  metric = "Email_hours",
+  title = "Average email hours",
+  bar_fill = rgb2hex(r = 242, g = 200, b = 15),
+  return = "dist"
+  )
+```
+
+### Average meeting hours
+
+```{r}
+bar_dow(
+  data = p_data,
+  metric = "Meeting_hours",
+  title = "Average meeting hours",
+  bar_fill = rgb2hex(r = 253, g = 98, b = 94),
+  return = "dist"
+  )
+```
+
+Column {data-width=50%}
+----------------------------------------------------------------------------
+
+### Average call hours
+
+```{r}
+bar_dow(
+  data = p_data,
+  metric = "Call_hours",
+  title = "Average call hours",
+  bar_fill = rgb2hex(r = 138, g = 212, b = 135),
+  return = "dist"
+  )
+```
+
+### Average instant message hours
+
+```{r}
+bar_dow(
+  data = p_data,
+  metric = "Instant_Message_hours",
+  title = "Average IM hours",
+  bar_fill = rgb2hex(r = 55, g = 70, b = 73),
+  return = "dist"
+  )
+```

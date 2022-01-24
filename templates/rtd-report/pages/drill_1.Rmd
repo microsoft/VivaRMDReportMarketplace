@@ -1,0 +1,40 @@
+Time Trend
+=====================================
+
+Column {data-width=100%} {.tabset}
+----------------------------------------------------------------------------
+
+### Day Span over time
+
+```{r}
+tt_viz(
+  data = p_data,
+  metric = "Workweek_span",
+  threshold = 2,
+  title = "Day Span"
+)
+```
+
+### Collaboration Hours over time
+
+```{r}
+tt_viz(
+  data = p_data,
+  metric = "Collaboration_hours",
+  threshold = 1,
+  title = "Collaboration hours"
+)
+```
+
+### After Hours over time
+
+```{r}
+tt_viz(
+  data = p_data,
+  metric = "After_hours_collaboration_hours",
+  threshold = 0,
+  title = "After hours"
+)
+```
+
+

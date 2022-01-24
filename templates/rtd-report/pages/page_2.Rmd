@@ -1,0 +1,131 @@
+Drill-down
+=====================================
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### Average day span 
+
+```{r}
+
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Workweek_span",
+  title = "Day span",
+  return = "topbox",
+  grid_fill = rgb2hex(r = 1, g = 92, b = 85)
+  )
+```
+
+### Average day span
+
+```{r}
+
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Workweek_span",
+  title = "Average working day span",
+  grid_fill = rgb2hex(r = 1, g = 92, b = 85)
+  )
+
+```
+
+### Average day span 
+
+```{r}
+
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Workweek_span",
+  title = "Day span",
+  return = "table"
+  ) %>%
+  knitr::kable()
+
+```
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### Average collaboration hours 
+
+```{r}
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Collaboration_hours",
+  title = "Collaboration hours",
+  return = "topbox",
+  grid_fill = rgb2hex(r = 1, g = 184, b = 170)
+  )
+```
+
+### Average collaboration hours
+
+```{r}
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Collaboration_hours",
+  title = "Average collaboration hours",
+  grid_fill = rgb2hex(r = 1, g = 184, b = 170)
+  )
+```
+
+### Average collaboration hours 
+
+```{r}
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "Collaboration_hours",
+  title = "Collaboration hours",
+  return = "table"
+  ) %>%
+  knitr::kable()
+```
+
+Column {data-width=33%}
+----------------------------------------------------------------------------
+
+### Average day span 
+
+```{r}
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "After_hours_collaboration_hours",
+  title = "After hours",
+  return = "topbox",
+  grid_fill = rgb2hex(r = 253, g = 98, b = 94)
+  )
+```
+
+### Average day span
+
+```{r}
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "After_hours_collaboration_hours",
+  title = "Average after hours",
+  grid_fill = rgb2hex(r = 253, g = 98, b = 94)
+  )
+```
+
+### Average day span 
+
+```{r}
+heatmap_dow(
+  data = p_data,
+  hrvar = hrvar_str,
+  metric = "After_hours_collaboration_hours",
+  title = "After hours",
+  return = "table"
+  ) %>%
+  knitr::kable()
+```
+
