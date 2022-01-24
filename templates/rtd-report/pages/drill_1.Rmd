@@ -1,0 +1,82 @@
+Time Trend
+=====================================
+
+Column {data-width=100%} {.tabset}
+----------------------------------------------------------------------------
+
+### Day Span over time
+
+```{r}
+tt_viz(
+  data = p_data,
+  metric = "Workweek_span",
+  threshold = 2,
+  title = "Day Span"
+)
+
+# avg_ch <- avg_vb(data = p_data, metric = "Workweek_span", return = "raw")
+# 
+# p_data %>%
+#   group_by(DayOfWeek, Date) %>%
+#   summarise(
+#     Workweek_span = mean(Workweek_span, na.rm = TRUE),
+#     .groups = "drop") %>%
+#   filter(Workweek_span >= 2) %>%
+#   ggplot(
+#     aes(
+#       x = Date,
+#       y = Workweek_span,
+#       colour = DayOfWeek
+#     )
+#     ) +
+#   geom_point(alpha = 0.8) +
+#   geom_hline(yintercept = avg_ch, linetype = "dashed", colour = "darkgrey") +
+#   geom_text(
+#     data = data.frame(
+#      AVGCH = avg_ch 
+#     ),
+#     aes(
+#       x = p_data %>%
+#         extract_date_range(return = "table") %>%
+#         pull(End),
+#       y = avg_ch,
+#       label = paste("Average:", round(AVGCH, 1))
+#       ),
+#     vjust = 1,
+#     colour = "darkgrey",
+#     size = 2
+#     ) +
+#   theme_wpa_basic() +
+#   labs(
+#     title = "Day Span over time",
+#     subtitle = "By days of the week",
+#     y = "Day Span",
+#     caption = paste(
+#       extract_date_range(p_data, return = "text"),
+#       "\nShowing day spans of 2 or more."
+#   ))
+```
+
+### Collaboration Hours over time
+
+```{r}
+tt_viz(
+  data = p_data,
+  metric = "Collaboration_hours",
+  threshold = 1,
+  title = "Collaboration hours"
+)
+```
+
+### After Hours over time
+
+```{r}
+tt_viz(
+  data = p_data,
+  metric = "After_hours_collaboration_hours",
+  threshold = 0,
+  title = "After hours"
+)
+```
+
+

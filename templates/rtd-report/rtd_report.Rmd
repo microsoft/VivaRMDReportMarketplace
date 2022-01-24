@@ -36,13 +36,13 @@ p_data <-
   mutate(DayOfWeek = lubridate::wday(Date, label = TRUE, abbr = FALSE) %>%
            factor(levels = 
              c(
-               "Sunday",
                "Monday",
                "Tuesday",
                "Wednesday",
                "Thursday",
                "Friday",
-               "Saturday"
+               "Saturday",
+               "Sunday"
              )
            )) %>%
   filter(Emails_sent >= min_activity | Instant_messages_sent >= min_activity) 
@@ -67,4 +67,10 @@ source("auxiliary.R")
 ```
 
 ```{r child="pages/channels.Rmd"}
+```
+
+```{r child="pages/channels_2.Rmd"}
+```
+
+```{r child="pages/drill_1.Rmd"}
 ```
