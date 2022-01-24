@@ -55,7 +55,16 @@ generate_report2(
   mingroup = 5
 )
 ```
+The arguments that you should pass to each report will differ depending on the report template. Please read the corresponding `README` file in each report template subdirectory for the appropriate example. 
+
 For a full example on how to run the `minimal.Rmd` example in this directory, see `example-usage.R` located at the root of this repository.
+
+### Report Templates
+
+The current report templates are available:
+- [Minimal report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/minimal-example) - as a minimal example of the report that can be produced with the above workflow. 
+- [Employee Experience Report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/exp-report) - a report on the Employee Experience Index. 
+- [Right to Disconnect Report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/rtd-report) - a report on collaboration metrics related to the Right to Disconnect, including an analysis on weekends. 
 
 
 ## References
