@@ -60,7 +60,7 @@ generate_report2(
                        "rtd-report",
                        "rtd_report.Rmd"), # path to RMarkdown file,
 
-  # Custom arguments to pass to `minimal-example/minimal.Rmd`
+  # Custom arguments to pass to `rtd-report/rtd_report.Rmd`
   data = spq_df, # Variable containing daily person query data frame
   hrvar = "Organization",
   mingroup = 5,
