@@ -50,7 +50,7 @@ p_data <-
 # Order by high to low
 hrvar_order <-
   p_data %>%
-  workloads_sum(hrvar = "Site", return = "table", mingroup = 0) %>%
+  workloads_sum(hrvar = hrvar_str, return = "table", mingroup = 0) %>%
   arrange(desc(Workweek_span)) %>%
   dplyr::pull(group)
 
