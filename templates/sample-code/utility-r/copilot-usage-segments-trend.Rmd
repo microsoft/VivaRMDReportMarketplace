@@ -29,8 +29,9 @@ This notebook shows how to:
    chart, alongside the trend in average Copilot actions.
 
 We use the built-in `pq_data` sample so the notebook runs end-to-end with no
-external files. To run this on your own data, replace the `pq_data` load with
-`vivainsights::import_query("your-person-query.csv")`.
+external files. Before adapting it to an export loaded with
+`vivainsights::import_query("your-person-query.csv")`, verify the metric schema,
+eligibility and measurement coverage described below.
 
 ## Set-up
 
@@ -50,20 +51,54 @@ notation in a few places to show which package each function comes from.
 
 `identify_usage_segments()` expects a single metric column that captures Copilot
 intensity. A Person Query splits Copilot activity across several
-`Copilot_actions_taken_in_*` columns (Teams, Outlook, Word, Excel, and so on),
-so we sum them into a single `Total_Copilot_actions_taken` column. We also
-replace missing values with `0`, because a missing action count means the person simply
-did not take that action that week.
+`Copilot_actions_taken_in_*` columns. This example sums the six named metrics
+below (Teams, Copilot chat (work), Excel, Outlook, PowerPoint and Word) into
+`Total_Copilot_actions_taken`; it is not a total across every possible Copilot
+surface. These names match the built-in sample's schema.
+
+All six columns must be present and contain numeric, finite, non-negative
+counts for every included person-week. An observed `0` is valid no activity;
+a missing column or `NA` is **unknown coverage**, not evidence of non-use.
+The notebook stops on invalid inputs rather than filling them with zeros or
+silently excluding them from the denominator.
 
 ```{r load}
 data("pq_data", package = "vivainsights")
 
-app_cols <- grep("^Copilot_actions_taken_in", names(pq_data), value = TRUE)
+app_cols <- c(
+  "Copilot_actions_taken_in_Teams",
+  "Copilot_actions_taken_in_Copilot_chat__work_",
+  "Copilot_actions_taken_in_Excel",
+  "Copilot_actions_taken_in_Outlook",
+  "Copilot_actions_taken_in_Powerpoint",
+  "Copilot_actions_taken_in_Word"
+)
 app_cols
 
+missing_cols <- setdiff(app_cols, names(pq_data))
+if (length(missing_cols)) {
+  stop("Missing required Copilot action columns: ",
+       paste(missing_cols, collapse = ", "),
+       ". Select these query metrics and verify coverage before classifying use.",
+       call. = FALSE)
+}
+
+invalid_cols <- app_cols[vapply(pq_data[app_cols], function(x) {
+  !is.numeric(x) || anyNA(x) || any(!is.finite(x)) || any(x < 0)
+}, logical(1))]
+if (length(invalid_cols)) {
+  stop("Copilot action counts must be numeric, finite, non-missing and non-negative: ",
+       paste(invalid_cols, collapse = ", "),
+       ". Check query coverage and correct the input; unknown counts are not zero activity.",
+       call. = FALSE)
+}
+
 pq <- pq_data %>%
-  mutate(across(all_of(app_cols), ~ tidyr::replace_na(.x, 0))) %>%
   mutate(Total_Copilot_actions_taken = rowSums(across(all_of(app_cols))))
+if (any(!is.finite(pq$Total_Copilot_actions_taken))) {
+  stop("Total Copilot actions are not finite. Check the input counts and metric scale.",
+       call. = FALSE)
+}
 
 # A quick look at the panel structure
 pq %>%
@@ -152,7 +187,7 @@ share is the signature of healthy adoption.
 ```{r avg-trend, fig.width=9, fig.height=4}
 actions_trend <- seg %>%
   group_by(MetricDate) %>%
-  summarise(mean_actions = mean(Total_Copilot_actions_taken, na.rm = TRUE),
+  summarise(mean_actions = mean(Total_Copilot_actions_taken),
             .groups = "drop")
 
 ggplot(actions_trend, aes(x = MetricDate, y = mean_actions)) +
@@ -171,6 +206,13 @@ ggplot(actions_trend, aes(x = MetricDate, y = mean_actions)) +
 With three short steps, namely summing the Copilot action columns, calling
 `identify_usage_segments(version = "12w")`, and aggregating by `MetricDate`, we
 turned a raw Person Query into a longitudinal view of Copilot adoption. The same
-code runs unchanged on a real export loaded with
-`vivainsights::import_query()`; just point it at your own file. Remember to treat
-the earliest weeks with caution because of the 12-week warm-up window.
+workflow can be adapted to a real export only after validating its source
+contract. Map the six metrics explicitly if names differ; do not omit a metric
+or insert zeros just to pass the checks. Numeric completeness alone does not
+establish eligibility or telemetry coverage. Confirm which people and weeks
+were measured, including missing person-weeks and any source-provided zeros
+that may represent unavailable data. If coverage is unresolved, stop the
+analysis or design and disclose a separate unknown-coverage policy before
+reporting adoption. The notebook does not infer that policy or perform a
+real-data privacy review. Treat the earliest weeks with caution because of
+the 12-week warm-up window.

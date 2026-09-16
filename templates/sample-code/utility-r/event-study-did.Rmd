@@ -1,5 +1,5 @@
 ---
-title: "Within-person event-study & difference-in-differences with **vivainsights** in R"
+title: "Educational simulation: event-study and difference-in-differences in R"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -17,9 +17,9 @@ collaboration behaviour actually change after they started using Copilot**, or
 are heavy users simply different people to begin with? A plain comparison of
 users vs non-users cannot separate the two, because adoption is not random.
 
-A **within-person event-study** paired with a **two-way fixed-effects (TWFE)
-difference-in-differences (DiD)** model is a standard way to address this. The
-design:
+This **educational, homogeneous-effect simulation** illustrates a within-person
+event-study and a **two-way fixed-effects (TWFE) DiD** model. It is **not a
+supported real-data causal recipe**. In this simulated design, the model:
 
 * aligns every adopter on their own **event time** (weeks relative to the week
   they adopted Copilot),
@@ -30,13 +30,13 @@ design:
 * reads the treatment effect as the *within-person* change in the treated group
   relative to the control group.
 
-Person Query exports do not ship with a clean adoption event, so this notebook
-builds a **small seeded simulation** whose column names match a real Person
-Query. The downstream modelling code therefore runs on a real export loaded
-with `vivainsights::import_query()`, so you swap out the data-generation chunk and
-map your outcome columns (shown below). The simulation injects a **clearly-labelled
-illustrative effect** so the model has something to recover; this is for
-demonstration only and is not a real result.
+Treatment assignment, full observation and constant post-adoption effects are
+known by construction here. TWFE can also compare earlier and later adopters;
+retaining never-adopters does not turn it into a never-treated-only estimator.
+Heterogeneous staggered effects can invalidate its interpretation. Real-data
+use requires a separate review of treatment timing, eligibility, missingness,
+attrition, selection, spillovers, parallel trends and the appropriate estimator.
+First observed activity is not generally the same as actual adoption.
 
 ## Set-up
 
@@ -52,18 +52,11 @@ library(scales)
 library(fixest)   # fast fixed-effects estimation (feols, i(), iplot)
 ```
 
-To run this notebook on your **own** export instead of the simulation, replace
-the simulation chunk below with the following, then continue unchanged from the
-*"Derive the adoption week"* section:
+Analysis configuration is independent of the simulator's known effect.
 
-```{r real-data, eval=FALSE, purl=FALSE}
-panel <- vivainsights::import_query("your-person-query.csv")
-app_cols <- grep("^Copilot_actions_taken_in", names(panel), value = TRUE)
-panel <- panel %>%
-  mutate(across(all_of(app_cols), ~ tidyr::replace_na(.x, 0))) %>%
-  mutate(Total_Copilot_actions_taken = rowSums(across(all_of(app_cols))))
-# choose the outcome column(s) to model, e.g. Collaboration_hours, Chat_hours,
-# Emails_sent -- these are standard Person Query columns.
+```{r analysis-config}
+WINDOW <- 8L
+components <- c("Collaboration_hours", "Chat_hours", "Emails_sent")
 ```
 
 ## Simulate a Person-Query-shaped panel
@@ -75,10 +68,8 @@ and a few collaboration outcomes (`Collaboration_hours`, `Chat_hours`,
 people never adopt. We add person baselines, calendar-week seasonality, and
 noise so the panel looks realistic.
 
-> **Replace this chunk for real data.** Load your export with
-> `vivainsights::import_query()` and derive the adoption week from the first week
-> of non-zero Copilot actions (see the next section). Everything downstream stays
-> the same.
+The panel resembles a Person Query for teaching purposes; matching column names
+is not evidence that an export satisfies the design assumptions.
 
 ```{r simulate}
 set.seed(100)
@@ -89,8 +80,7 @@ weeks     <- seq(as.Date("2024-01-01"), by = "week", length.out = n_weeks)
 
 # ---- clearly-labelled illustrative effect ---------------------------------
 # DEMO ONLY: this is the size of the behaviour change we inject into treated
-# people after adoption. Set to 0 (or delete) when running on real data, so the
-# model should estimate the effect, not have it baked in.
+# people after adoption. This constant is used only in the simulator.
 TREATMENT_EFFECT <- 0.8   # extra collaboration hours/week once adopted
 # ---------------------------------------------------------------------------
 
@@ -138,43 +128,49 @@ panel <- tidyr::crossing(PersonId = persons$PersonId, week_idx = seq_len(n_weeks
          Collaboration_hours, Chat_hours, Emails_sent)
 
 head(panel)
+cat(sprintf("Injected simulation effect: %+.2f hours/week\n", TREATMENT_EFFECT))
 ```
 
 ## Derive the adoption week and event time
 
-On a real export you would not know who is "treated"; you would infer it from
-the data. Here we reproduce that realistic step: a person is an **adopter** if
-they ever record a non-zero Copilot action, and their **adoption week** is the
-first such week. Control people (never any actions) are assigned a **placebo**
-adoption week (the median adopter week), so they contribute a comparable
-event-time window.
+In this complete simulated panel, first activity identifies adoption. This is a
+property of the simulator, not a real-data identification rule. Adopters retain
+their ±8-week windows. Never-adopters retain **all calendar weeks present in those
+windows**, rather than being trimmed around an arbitrary placebo date.
 
 ```{r event-time}
+stopifnot(all(c("PersonId", "MetricDate", "Total_Copilot_actions_taken",
+               components) %in% names(panel)),
+          !anyNA(panel[c("PersonId", "MetricDate", "Total_Copilot_actions_taken")]),
+          !anyDuplicated(panel[c("PersonId", "MetricDate")]))
 adopt <- panel %>%
   filter(Total_Copilot_actions_taken > 0) %>%
   group_by(PersonId) %>%
   summarise(adopt_date = min(MetricDate), .groups = "drop")
 
-placebo_date <- as.Date(median(adopt$adopt_date))
-
 panel <- panel %>%
   left_join(adopt, by = "PersonId") %>%
   mutate(
     is_adopter = !is.na(adopt_date),
-    anchor     = dplyr::coalesce(adopt_date, placebo_date),
-    event_week = as.integer((MetricDate - anchor) / 7)
+    event_week = as.integer((MetricDate - adopt_date) / 7)
   )
 
-# Keep a balanced +/- 8-week window around each person's anchor
-WINDOW <- 8L
-panel_es <- panel %>%
-  filter(event_week >= -WINDOW, event_week <= WINDOW) %>%
+adopter_windows <- panel %>%
+  filter(is_adopter, event_week >= -WINDOW, event_week <= WINDOW) %>%
   group_by(PersonId) %>%
-  filter(sum(event_week < 0) >= 4, sum(event_week > 0) >= 4) %>%
-  ungroup() %>%
+  filter(n_distinct(event_week) == 2L * WINDOW + 1L) %>%
+  ungroup()
+control_weeks <- panel %>%
+  filter(!is_adopter) %>%
+  semi_join(distinct(adopter_windows, MetricDate), by = "MetricDate") %>%
+  mutate(event_week = 0L) # inert in interactions: treated_grp is zero
+stopifnot(nrow(adopter_windows) > 0, nrow(control_weeks) > 0,
+          setequal(adopter_windows$MetricDate, control_weeks$MetricDate))
+
+panel_es <- bind_rows(adopter_windows, control_weeks) %>%
   mutate(
     treated_grp = as.integer(is_adopter),
-    post        = as.integer(event_week >= 0),
+    post        = as.integer(is_adopter & event_week >= 0),
     treat_post  = post * treated_grp
   )
 
@@ -205,14 +201,14 @@ summary(did)
 
 did_beta <- coef(did)[["treat_post"]]
 cat(sprintf(
-  "\nDiD estimate: %+.2f collaboration hours/week (injected demo effect was %+.2f)\n",
-  did_beta, TREATMENT_EFFECT
+  "\nDiD estimate: %+.2f collaboration hours/week\n",
+  did_beta
 ))
 ```
 
-The recovered coefficient should land close to the injected `TREATMENT_EFFECT`,
-confirming the model is working. On real data you would *not* know the true
-value, and that is the whole point of estimating it.
+Compare the estimated coefficient with the separately reported simulation effect.
+Recovery in this homogeneous simulation is a teaching check, not validation of
+causal identification on real observations.
 
 ## The event-study: check for pre-trends and see the effect emerge
 
@@ -256,30 +252,27 @@ ggplot(es_coefs, aes(event_week, Estimate)) +
   geom_ribbon(aes(ymin = lwr, ymax = upr), fill = "#5fa8d3", alpha = 0.25) +
   geom_line(linewidth = 1, colour = "#1b4965") +
   geom_point(size = 2, colour = "#1b4965") +
-  scale_x_continuous(breaks = seq(-WINDOW, WINDOW, 2)) +
   labs(
     title    = "Event-study: collaboration hours around Copilot adoption",
-    subtitle = "Coefficients vs event week (ref = week -1), 95% CI. Flat before, steps up after.",
+    subtitle = "Homogeneous simulation; reference = week -1; pointwise approximate 95% CI",
     x = "Weeks relative to adoption", y = "Effect vs week -1 (hours/week)"
   ) +
   theme_minimal(base_size = 12)
 ```
 
-A flat pre-period and a clean post-period step is the visual signature of a
-credible DiD. If the pre-period coefficients trended, you would be worried that
-adopters were already diverging before Copilot and would treat the DiD estimate
-with caution.
+A pre-period trend is a warning, but a flat pre-period is **not proof of parallel
+trends**: tests can have low power, and TWFE leads can be contaminated under
+heterogeneous treatment effects. These pointwise intervals are not a joint
+pre-trend test or simultaneous confidence band.
 
 ## Bonus: run the same design on a composite index
 
-Individual metrics can be noisy. A robust alternative is to combine several
+Individual metrics can be noisy. An illustrative alternative is to combine several
 related collaboration metrics into a single **z-scored composite index**, then
 run the identical DiD on the index. Each component is standardised across the
 panel (mean 0, sd 1) and averaged, so no single metric's scale dominates.
 
 ```{r composite, fig.width=9, fig.height=4}
-components <- c("Collaboration_hours", "Chat_hours", "Emails_sent")
-
 zscore <- function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
 
 panel_es <- panel_es %>%
@@ -294,22 +287,21 @@ did_index <- fixest::feols(
 
 summary(did_index)
 
-# Event-time trajectory of the composite, treated vs control
+# Calendar time keeps the control comparison on actual shared weeks.
 idx_traj <- panel_es %>%
   mutate(grp = ifelse(treated_grp == 1, "Adopter", "Control")) %>%
-  group_by(grp, event_week) %>%
+  group_by(grp, MetricDate) %>%
   summarise(idx = mean(collab_index), .groups = "drop")
 
-ggplot(idx_traj, aes(event_week, idx, colour = grp)) +
-  geom_vline(xintercept = -0.5, linetype = "dashed", colour = "grey40") +
+ggplot(idx_traj, aes(MetricDate, idx, colour = grp)) +
   geom_line(linewidth = 1) +
   geom_point(size = 1.8) +
   scale_colour_manual(values = c("Adopter" = "#1b4965", "Control" = "#bc4b51"),
                       name = NULL) +
   labs(
-    title    = "Composite collaboration index around adoption",
-    subtitle = "Mean z-scored index (Collaboration hours + Chat hours + Emails sent)",
-    x = "Weeks relative to adoption", y = "Composite index (z-units)"
+    title    = "Composite collaboration index by calendar week",
+    subtitle = "Descriptive windowed means; adopter composition varies by calendar week",
+    x = "Calendar week", y = "Composite index (z-units)"
   ) +
   theme_minimal(base_size = 12) +
   theme(legend.position = "top")
@@ -317,10 +309,8 @@ ggplot(idx_traj, aes(event_week, idx, colour = grp)) +
 
 ## Wrapping up
 
-The event-study + TWFE DiD pattern is a portable way to ask *"did behaviour
-change after adoption, within the same person?"* without being fooled by the
-fact that adopters differ from non-adopters. To apply it to your own data,
-replace the simulation chunk with `vivainsights::import_query()`, derive the
-adoption week from the first non-zero Copilot action, set `TREATMENT_EFFECT`
-aside entirely, and let the model estimate the effect. Always inspect the
-event-study pre-trends before trusting the single DiD number.
+This notebook demonstrates the mechanics of TWFE under a known homogeneous
+simulation. It does not establish that an observational query supports causal
+inference, nor that a favourable pre-trend plot makes it so. The composite uses
+full-panel standardisation for illustration; a real study would also need
+pre-specified components and a defensible, treatment-independent reference scale.

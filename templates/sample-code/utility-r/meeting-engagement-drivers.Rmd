@@ -27,8 +27,7 @@ else while it runs?
 Viva Insights captures a few behavioural signals for every meeting that let us
 approximate engagement, including the number of attendees multitasking and the
 number of **chats and emails sent during the meeting**. In this example we treat
-in-meeting messaging as a proxy for disengagement (a busy backchannel usually
-means people are only half-present) and ask a simple modelling question: **which
+in-meeting messaging as an unvalidated proxy for disengagement and ask a modelling question: **which
 characteristics of a meeting best predict how much backchannel messaging it
 generates?**
 
@@ -44,8 +43,8 @@ document, so it is fully reproducible with no data of your own. The package does
 ship a sample Meeting Query (`vivainsights::mt_data`), but it is small and mostly
 single-person focus blocks, so it lacks the multi-person meetings and in-meeting
 messaging this model needs. We use a seeded simulation instead, built with the
-same column names as a real Meeting Query, so that the identical downstream code
-runs on your own export.
+similar column names to a Meeting Query. Matching names does not validate proxy
+meaning, coverage or the analysis contract for your own export.
 
 ## Set-up and data preparation
 
@@ -53,9 +52,8 @@ We begin by simulating a Meeting Query. The data-generating process makes
 **duration the dominant driver** of messaging, with a sub-linear (exponent < 1)
 relationship, so total messaging rises with length while per-minute messaging
 gently declines, which creates a plausible pattern for demonstration. The column
-names match a real Meeting Query, so to run this on your own tenant you can
-replace `simulate_meeting_query()` with
-`vivainsights::import_query("your_meeting_query.csv")`. (The shipped
+names resemble a Meeting Query, but any tenant adaptation requires separate
+schema, privacy and proxy-validity review. (The shipped
 `vivainsights::mt_data` is handy for inspecting the expected schema, but is too
 small and focus-block-heavy to fit this model.)
 
@@ -98,8 +96,6 @@ simulate_meeting_query <- function(n = 2000, seed = 42) {
   )
 }
 
-# On your own data, replace this line with an exported Meeting Query, e.g.
-#   vivainsights::import_query("your_meeting_query.csv")
 mt_raw <- simulate_meeting_query()
 ```
 
@@ -237,10 +233,11 @@ per attendee, and the same figure **per minute**. If the per-minute rate were fl
 the total would be pure exposure (just more minutes). If it varies, something more
 interesting is going on.
 
-```{r}
+```{r duration-summary}
 dose <- model_df %>%
   mutate(
     msgs_per_att = chats_per_att + emails_per_att,
+    msgs_per_att_permin = msgs_per_att / duration_min,
     band = cut(
       duration_min,
       breaks = c(0, 15, 30, 60, 120, Inf),
@@ -252,18 +249,17 @@ dose <- model_df %>%
   summarise(
     n_meetings          = n(),
     msgs_per_att        = mean(msgs_per_att, na.rm = TRUE),
-    msgs_per_att_permin = mean(msgs_per_att / duration_min, na.rm = TRUE),
+    msgs_per_att_permin = mean(msgs_per_att_permin, na.rm = TRUE),
     .groups = "drop"
   )
 
 dose
 ```
 
-The usual pattern is that **total messaging per attendee rises with length**, while
-the **per-minute rate is roughly flat or gently declining**. In other words, longer
-meetings are not disproportionately distracting minute-for-minute, but disengagement
-does not correct itself either: once people drift into the backchannel they tend to
-stay there, so the distraction accumulates across a long session.
+These are equally weighted means of meeting-level counts and meeting-level rates,
+not a ratio of group means. The simulator deliberately plants increasing total
+messaging and a gently declining per-minute rate. Neither this pattern nor
+in-meeting messaging proves disengagement: messages can also support the meeting.
 
 A simple linear model gives us the marginal effect of length, holding meeting size
 constant, as an interpretable companion to the forest.
@@ -280,13 +276,11 @@ coef(lm_dur)[["duration_min"]] * 30
 
 ## What this means
 
-Read carefully, the result is **not** that multitasking is an unavoidable fact of
-meetings that we should ignore, nor that the only response is to cut meeting volume.
-The messaging rate is not fixed: it responds to how a meeting is designed, and
-length is the part of the design that most reliably manufactures disengagement.
-Shorter meetings help twice over, because fewer people drift off in the first place
-and the drift that does happen has less time to accumulate. In-meeting messaging is
-therefore a **movable signal** worth tracking, not background noise.
+This is an educational association model with a planted duration relationship,
+not evidence that shortening meetings improves engagement. The model does not
+observe attention, message purpose or meeting value. Real-data use requires
+schema, coverage, privacy and proxy-validity review; column-name similarity alone
+does not make a tenant export interchangeable with this simulation.
 
 A few transferable practices for this kind of analysis:
 

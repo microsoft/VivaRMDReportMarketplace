@@ -1,5 +1,5 @@
 ---
-title: "Scanning many metrics with a difference-in-differences model: Power vs Low Copilot users in R"
+title: "Educational simulation: a difference-in-differences metric scan"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -30,11 +30,13 @@ assumption, see the companion `event-study-did` example. Here the focus is the
 **scan across metrics** and honest reporting of significance, including metrics
 that do **not** move.
 
-As with the companion example, a Person Query does not ship with a clean
-adoption event, so we build a **small seeded simulation** whose column names
-match a real Person Query. Swap the simulation chunk for
-`vivainsights::import_query()` and the scan runs unchanged. The per-metric
-effects are **injected for demonstration only** and are not real results.
+This is an **educational, homogeneous-effect simulation**, not a supported
+real-data causal recipe. Groups and adoption timing are assigned by the simulator,
+not inferred from outcomes. Real observational intensity groups may be selected
+on post-treatment behaviour. First observed activity need not be actual adoption.
+Eligibility, coverage, selection, attrition, parallel trends, spillovers and
+heterogeneous staggered effects require a separate design review. Fixed effects
+and BH adjustment do not establish causal identification.
 
 ## Set-up
 
@@ -50,6 +52,15 @@ library(purrr)
 library(fixest)
 ```
 
+Analysis configuration is independent of the simulator's injected effects.
+
+```{r analysis-config}
+METRICS <- c("Emails_sent", "Chats_sent", "Meeting_hours",
+             "Collaboration_hours", "After_hours_collaboration_hours",
+             "Channel_message_posts")
+WINDOW <- 8L
+```
+
 ## Simulate a Person-Query-shaped panel with two intensity groups
 
 Everyone here is a licensed adopter with an adoption week; they differ in
@@ -59,9 +70,8 @@ a *different* post-adoption change for Power vs Low on each metric. Some
 differentials are large, some small, and one is zero, so the scan will show a
 realistic mix of significant and non-significant results.
 
-> **Replace this chunk for real data.** Load with `vivainsights::import_query()`,
-> classify Power/Low with `vivainsights::identify_usage_segments(version = "12w")`,
-> and derive each person's anchor week from their first Copilot action.
+The simulated panel explicitly supplies person, calendar week, assigned group
+and adoption week. A Person Query alone does not establish these design inputs.
 
 ```{r simulate}
 set.seed(202)
@@ -72,8 +82,7 @@ weeks     <- seq(as.Date("2024-01-01"), by = "week", length.out = n_weeks)
 
 # ---- clearly-labelled illustrative effects --------------------------------
 # DEMO ONLY: the extra post-adoption change for POWER users relative to LOW
-# users, per metric. Delete / set to 0 for real data, because the model should
-# estimate these, not have them baked in. Note one metric is 0 on purpose.
+# users, per metric. These values belong only to the simulator.
 EFFECTS <- c(
   Emails_sent                     =  1.5,
   Chats_sent                      =  3.0,
@@ -130,7 +139,11 @@ Each person's anchor is their adoption week; we keep a balanced ±8-week window.
 product `treat_post` is the DiD term.
 
 ```{r event-time}
-WINDOW <- 8L
+stopifnot(all(c("PersonId", "MetricDate", "week_idx", "adopt_wk", "group",
+               METRICS) %in% names(panel)),
+          !anyNA(panel[c("PersonId", "MetricDate", "week_idx", "adopt_wk", "group")]),
+          !anyDuplicated(panel[c("PersonId", "MetricDate")]),
+          setequal(unique(panel$group), c("Power User", "Low User")))
 
 panel_es <- panel |>
   mutate(event_week = week_idx - adopt_wk) |>
@@ -149,10 +162,14 @@ panel_es |> distinct(PersonId, group) |> count(group)
 
 ## Run the DiD once per metric and collect the results
 
-We fit `y ~ treat_post | PersonId + MetricDate` (person + week fixed effects,
+We fit `y ~ post + treat_post | PersonId + MetricDate` (person + week fixed effects,
 person-clustered SE) for every metric, then record the effect, its 95% CI, the
 p-value adjusted across the metric scan, significance stars, and the effect as a share of the Power group's
 pre-adoption baseline.
+
+The person-specific `post` main effect captures the common adoption change in
+both groups. With staggered dates it is **not** absorbed by calendar-week fixed
+effects. The time-invariant group main effect is absorbed by person fixed effects.
 
 ```{r scan}
 stars <- function(p) dplyr::case_when(
@@ -161,7 +178,7 @@ stars <- function(p) dplyr::case_when(
 
 run_did <- function(metric) {
   fit <- fixest::feols(
-    as.formula(paste0(metric, " ~ treat_post | PersonId + MetricDate")),
+    as.formula(paste0(metric, " ~ post + treat_post | PersonId + MetricDate")),
     data = panel_es, cluster = ~PersonId
   )
   ct  <- fit$coeftable["treat_post", ]
@@ -179,7 +196,7 @@ run_did <- function(metric) {
   )
 }
 
-results <- purrr::map_dfr(names(EFFECTS), run_did) |>
+results <- purrr::map_dfr(METRICS, run_did) |>
   mutate(
     p_adjusted = p.adjust(p_value, method = "BH"),
     sig = stars(p_adjusted)
@@ -201,8 +218,10 @@ results |>
 
 Read the table as: *within-person, Power users changed this metric by `Δ` more
 than Low users did after adoption.* The `Sig` column separates signals from
-noise, and note the deliberately null metric lands **n.s.**, which is exactly the
-kind of honest result this scan is meant to surface.
+noise under this simulation's assumptions. Even a deliberately null metric can
+be significant by chance; the generated table, not the injected effect, determines
+the displayed result. BH-adjusted p-values control false discoveries under their
+assumptions; the displayed 95% intervals are pointwise, not multiplicity-adjusted.
 
 ## Forest plot
 
@@ -221,7 +240,7 @@ ggplot(results,
                   linewidth = 0.7, size = 0.5) +
   scale_x_continuous(labels = scales::percent) +
   scale_colour_manual(values = c(`TRUE` = "#1b4965", `FALSE` = "#bc4b51"),
-                      labels = c(`TRUE` = "Significant (p<0.05)", `FALSE` = "n.s."),
+                      labels = c(`TRUE` = "Significant (BH p<0.05)", `FALSE` = "n.s."),
                       name = NULL) +
   labs(
     title    = "Power vs Low Copilot users: DiD effect by metric",
@@ -234,9 +253,7 @@ ggplot(results,
 
 ## Wrapping up
 
-Looping a DiD across metrics turns a vague "Power users collaborate more" claim
-into a defensible, per-metric statement with effect sizes and significance,
-including the honest cases where a metric does not move. To run this on your own
-data, replace the simulation with `vivainsights::import_query()`, define the
-Power and Low groups with `identify_usage_segments()`, and derive each anchor
-week from the first Copilot action; the scan and forest plot then work unchanged.
+The scan demonstrates estimation and multiplicity reporting under a known,
+homogeneous data-generating process. It does not validate a real-data causal
+effect or a heterogeneous staggered-adoption estimator. Do not simply replace
+the simulator with a query and interpret the output causally.

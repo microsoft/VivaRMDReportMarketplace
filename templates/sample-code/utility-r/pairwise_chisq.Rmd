@@ -50,6 +50,21 @@ sample_data_merged <- merge(sample_data, cat_data, by = "PersonId")
 cat_vars <- c("Teams", "Regions", "Functions", "Organization", "LevelDesignation")
 ```
 
+The unit of this test is a **person**, not a person-week. These sample attributes
+are constant within each person; repeated weeks must not increase the sample
+size. The following check rejects changing attributes instead of arbitrarily
+choosing the first value. For time-varying attributes, choose a documented common
+snapshot date or a repeated-observation design before using this example.
+
+```{r person-snapshot}
+person_categories <- sample_data_merged |>
+  distinct(PersonId, across(all_of(cat_vars)))
+if (anyNA(person_categories$PersonId) ||
+    anyDuplicated(person_categories$PersonId)) {
+  stop("Expected one stable categorical record per person; choose a common snapshot.")
+}
+```
+
 ## Step 3: Perform pairwise chi-square tests for all categorical variables
 
 In the following, we first use `combn()` to generate all combinations of variable pairs. `combn()` comes from the **utils** package, and generates all combinations of a vector of elements of a given size. Here, we set `m = 2` to yield pairs.
@@ -61,7 +76,13 @@ on the Benjamini-Hochberg adjusted p-value. The significance level is denoted
 by asterisks, where `***` indicates adjusted p < 0.001, `**` indicates
 adjusted p < 0.01, and `*` indicates adjusted p < 0.05.
 
-```{r}
+Pairs use complete cases, dropping unused levels. If any expected count is below
+five, we use a seeded Monte Carlo chi-square p-value (9,999 replicates), not the
+sparse-table asymptotic approximation. Degenerate pairs with fewer than two
+observed levels in either variable are reported as not testable.
+
+```{r pairwise-tests}
+set.seed(124)
 # Generate all combinations of variable pairs
 cat_var_combinations <- combn(x = cat_vars, m = 2, simplify = FALSE)
 
@@ -72,10 +93,20 @@ results_df <-
   var2 <- .x[2]
 
   # Create a contingency table
-  contingency_table <- table(sample_data_merged[[var1]], sample_data_merged[[var2]])
+  complete <- complete.cases(person_categories[c(var1, var2)])
+  contingency_table <- table(
+    droplevels(factor(person_categories[[var1]][complete])),
+    droplevels(factor(person_categories[[var2]][complete]))
+  )
 
-  # Perform chi-square test
-  chi_test <- chisq.test(contingency_table)
+  if (any(dim(contingency_table) < 2L)) {
+    return(tibble(var1, var2, chi2 = NA_real_, p = NA_real_,
+                  n = sum(contingency_table), method = "Not testable"))
+  }
+  expected <- outer(rowSums(contingency_table), colSums(contingency_table)) /
+    sum(contingency_table)
+  chi_test <- chisq.test(contingency_table,
+                        simulate.p.value = any(expected < 5), B = 9999)
 
   # Return data frame with raw p-values
   tibble(
@@ -83,7 +114,8 @@ results_df <-
     var2 = var2,
     chi2 = chi_test$statistic,
     p = chi_test$p.value,
-    n = sum(contingency_table)
+    n = sum(contingency_table),
+    method = chi_test$method
   )
 })
 
@@ -91,6 +123,7 @@ results_df <- results_df %>%
   mutate(
     p_adjusted = p.adjust(p, method = "BH"),
     significance = case_when(
+      is.na(p_adjusted) ~ "Not testable",
       p_adjusted < 0.001 ~ "***",
       p_adjusted < 0.01 ~ "**",
       p_adjusted < 0.05 ~ "*",

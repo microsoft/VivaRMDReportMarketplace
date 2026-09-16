@@ -1,5 +1,5 @@
 ---
-title: "Evaluating a Workplace Intervention with Viva Insights in R"
+title: "Educational simulation: a workplace intervention contrast"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -26,17 +26,22 @@ and, just as importantly, *did anything simply move somewhere else?*
 Answering this credibly needs more than a before-and-after comparison for the
 group that took part. A company-wide trend, a seasonal effect, or a change in how
 a metric is calculated can all masquerade as a programme effect. The antidote is a
-simple **quasi-experiment**:
+carefully designed comparison. The following simulation illustrates the arithmetic:
 
 - Compare a **treated** group (who received the intervention) against a **control**
   group (who did not).
 - Split time into **Before**, **During**, and **After** windows.
 - Use a **difference-in-differences** read: the treated group's change minus the
   control group's change.
-- **Discount any signal that moves the same way in the control group**, because a
-  change that shows up where there was no intervention cannot have been caused by it.
+- Compare both groups' changes, while remembering that common trends and
+  intervention spillovers cannot be separated by subtraction alone.
 
-We demonstrate this on the built-in `pq_data` sample Person Query.
+We demonstrate the arithmetic on the built-in `pq_data` sample Person Query with
+an injected effect. **This is an educational simulation, not a supported
+real-data causal recipe.** No actual intervention is observed, and no confidence
+interval or identification check is implemented. Parallel trends, stable
+composition, treatment selection, coverage and absence of spillovers would need
+a separate study design.
 
 ## Data preparation
 
@@ -73,8 +78,8 @@ count(pq, group, period)
 
 The sample data contains no real intervention, so purely for demonstration we
 inject a modest, clearly labelled reduction in multitasking for the treated group
-during and after the programme. **Delete this block when using your own data**; it
-exists only so the method has a real effect to detect.
+during and after the imaginary programme. This injected change is a teaching
+device, not an observed programme effect.
 
 ```{r}
 pq <- pq %>%
@@ -116,7 +121,8 @@ summ
 
 Now the key comparison. We look at each group's change from Before to After, and
 take the difference between them. The control group's change captures whatever was
-happening anyway; subtracting it isolates the treated-specific effect.
+happening in that group; subtracting it produces a descriptive contrast. It
+isolates a causal effect only under assumptions not established by this example.
 
 ```{r}
 wide <- summ %>%
@@ -149,12 +155,10 @@ ggplot(summ, aes(x = period, y = value, colour = group, group = group)) +
 
 ## Reading the result honestly
 
-The **difference-in-differences** is the number to trust, not the treated group's
-before/after change on its own. If the control group had moved by a similar amount,
-we would conclude the shift was an organisation-wide or seasonal effect (or even a
-change in how the metric is computed) and **discount it**, regardless of how good
-the treated group's raw change looked. A change that appears equally in a group
-that received no intervention cannot have been caused by the intervention.
+The descriptive **difference-in-differences** is more informative than the
+treated group's before/after change alone, but it is not automatically causal.
+A similar control change may reflect a common trend, measurement change or
+spillover; this comparison alone cannot distinguish them.
 
 Two further checks are worth building in as a habit:
 
@@ -169,9 +173,6 @@ Transferable practices: always include a control population; structure the data 
 Before / During / After from the weekly person query; aggregate in two stages; and
 discount any signal that also moves in the control.
 
-This design is reusable for any workplace intervention, including an AI-adoption
-programme. Framing a Copilot enablement wave as the "treated" group and measuring
-the difference-in-differences against a comparable control is a clean way to show
-whether adoption is associated with real shifts in collaboration or wellbeing
-signals, rather than relying on a simple before-and-after that a company-wide trend
-could easily confound.
+These summaries teach person-weighted aggregation and a descriptive contrast.
+Do not substitute a tenant query and claim an intervention effect without a
+separately reviewed design and an appropriate uncertainty estimate.

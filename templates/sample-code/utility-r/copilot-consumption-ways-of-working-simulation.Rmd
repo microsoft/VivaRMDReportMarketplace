@@ -20,6 +20,7 @@ library(scales)
 library(knitr)
 library(vivainsights)
 library(ggrepel)
+source("consumption-contracts.R", local = knitr::knit_global())
 
 MIN_GROUP_N <- 10L
 PAL <- c("#1F4E79", "#2E75B6", "#7FA8D0", "#BDD3E8",
@@ -49,6 +50,7 @@ people <- read_demo("reference", "people-snapshot.csv")
 consumption <- read_demo("consumption-query", "consumption-weekly.csv") |>
   mutate(MetricDate = as.Date(MetricDate))
 credit_tasks <- read_demo("consumption-query", "consumption-task-types.csv")
+validate_task_credits(consumption, credit_tasks)
 pq <- read_demo("person-query", "person-query-weekly.csv") |>
   mutate(MetricDate = as.Date(MetricDate))
 net_monthly <- read_demo("person-query", "network-monthly.csv")
@@ -124,6 +126,7 @@ person_consumption <- consumption |>
   group_by(PersonId) |>
   summarise(
     weekly_credits = mean(Copilot_credits_consumed),
+    total_credits = sum(Copilot_credits_consumed),
     weekly_actions = mean(Total_Copilot_actions_taken),
     weekly_tokens = mean(Input_tokens + Output_tokens + Reasoning_tokens),
     total_tokens = sum(Input_tokens + Output_tokens + Reasoning_tokens),
@@ -176,11 +179,14 @@ person_base <- people |>
     ),
     ReasoningProfile = case_when(
       !positive_consumer ~ "No consumption",
-      total_tokens < 10000 ~ "Insufficient token volume",
+      is.na(total_tokens) | total_tokens < 10000 |
+        !is.finite(reasoning_share) | !is.finite(reasoning_cut) ~
+          "Insufficient token volume",
       reasoning_share >= reasoning_cut ~ "Reasoning-intensive",
       TRUE ~ "Standard-cost mix"
     ),
     ConsumptionProfile = case_when(
+      ReasoningProfile == "Insufficient token volume" ~ "Insufficient token volume",
       CreditBand == "High credit" &
         ReasoningProfile == "Reasoning-intensive" ~
           "High credit, reasoning-intensive",
@@ -930,7 +936,7 @@ Row {data-height=480}
 
 ```{r reasoning-profile, fig.height=4.3, fig.alt="Grouped bars comparing weekly credit volume for reasoning-intensive and standard-cost profiles within each credit band."}
 profile_summary <- person_wow |>
-  filter(ConsumptionProfile != "No consumption") |>
+  filter(ReasoningProfile %in% c("Reasoning-intensive", "Standard-cost mix")) |>
   group_by(ConsumptionProfile) |>
   summarise(
     People = n(),
@@ -940,7 +946,8 @@ profile_summary <- person_wow |>
     `After-hours hours` = mean(After_hours_collaboration_hours),
     `Collaboration span` = mean(Collaboration_span),
     .groups = "drop"
-  )
+  ) |>
+  disclose_breakdown(MIN_GROUP_N)
 
 profile_grid <- profile_summary |>
   mutate(
@@ -952,6 +959,9 @@ profile_grid <- profile_summary |>
     )
   )
 
+if (!nrow(profile_grid)) {
+  cat("Reasoning-profile breakdown withheld: insufficient reportable population.")
+} else {
 ggplot(
   profile_grid,
   aes(CreditBand, `Credits / person / week`, fill = `Reasoning-token profile`)
@@ -975,6 +985,7 @@ ggplot(
     x = "Credit-volume band", y = "Credits / person / week",
     fill = "Reasoning-token profile"
   )
+}
 ```
 
 ### Profile definitions
@@ -984,11 +995,25 @@ ggplot(
 | High credit | Q3 or Q4 among positive users | Higher total credit volume |
 | Lower credit | Q1 or Q2 among positive users | Lower total credit volume |
 | Reasoning-intensive | Upper quartile of reasoning-token share among people with at least 10,000 tokens | More expensive token mix |
-| Standard-cost mix | Below the reasoning-intensive threshold | Less expensive observed token mix |
+| Standard-cost mix | At least 10,000 tokens and below the reasoning-intensive threshold | Less expensive observed token mix |
+| Insufficient token volume | Positive credits but insufficient observed tokens to classify | Unclassified; excluded from measured-profile comparisons |
 
 The label **reasoning-intensive** describes the measurable consumption pattern
 without assuming recklessness. Business value and task difficulty are needed
 before judging whether the additional expense was warranted.
+Unclassified consumers remain in population and credit-volume denominators.
+They are never silently included in the standard-cost group.
+
+```{r profile-coverage}
+profile_coverage <- person_base |>
+  count(ReasoningProfile, name = "People") |>
+  disclose_breakdown(MIN_GROUP_N)
+if (!nrow(profile_coverage)) {
+  cat("Classification counts withheld: at least one positive cell is below the disclosure floor.")
+} else {
+  kable(profile_coverage, caption = "Classification coverage, including unclassified consumers.")
+}
+```
 
 Row {data-height=455}
 -------------------------------------
@@ -996,6 +1021,9 @@ Row {data-height=455}
 ### Workload by reasoning-token profile within credit bands
 
 ```{r reasoning-outcomes, fig.height=4.1, fig.alt="Bars comparing after-hours collaboration and collaboration span across standard-cost and reasoning-intensive profiles."}
+if (!nrow(profile_summary)) {
+  cat("Reasoning-profile outcomes withheld: insufficient reportable population.")
+} else {
 profile_summary |>
   select(ConsumptionProfile, People,
          `After-hours hours`, `Collaboration span`) |>
@@ -1021,22 +1049,30 @@ profile_summary |>
     subtitle = "Compared within the same broad credit band",
     x = NULL, y = NULL, fill = "Reasoning-token profile"
   )
+}
 ```
 
 ### What work consumes the credits?
 
 ```{r task-mix, fig.height=4.1, fig.alt="Stacked bars comparing the share of credits used by delegated task type for high-credit and lower-credit users."}
-credit_tasks |>
+band_totals <- person_base |>
+  group_by(CreditBand) |>
+  summarise(TotalCredits = sum(total_credits), .groups = "drop")
+
+task_mix <- credit_tasks |>
   left_join(select(person_base, PersonId, CreditBand), by = "PersonId") |>
-  filter(CreditBand != "No consumption") |>
+  filter(CreditBand != "No consumption", credits > 0) |>
   group_by(CreditBand, TaskType) |>
   summarise(Credits = sum(credits), People = n_distinct(PersonId),
             .groups = "drop") |>
-  group_by(CreditBand) |>
-  mutate(TotalCredits = sum(Credits),
-         Share = Credits / TotalCredits) |>
-  ungroup() |>
-  filter(People >= MIN_GROUP_N) |>
+  left_join(band_totals, by = "CreditBand", relationship = "many-to-one") |>
+  mutate(Share = Credits / TotalCredits) |>
+  disclose_breakdown(MIN_GROUP_N)
+
+if (!nrow(task_mix)) {
+  cat("Task breakdown withheld: at least one positive cell is below the disclosure floor.")
+} else {
+task_mix |>
   ggplot(aes(CreditBand, Share, fill = reorder(TaskType, Share))) +
   geom_col(width = 0.68) +
   geom_text(
@@ -1050,9 +1086,10 @@ credit_tasks |>
   theme_t() +
   labs(
     title = "Credit mix by delegated task type",
-    subtitle = "Visible task types retain the full credit denominator; suppressed types are not shown",
+    subtitle = "Same person/window weekly-credit denominator; the entire breakdown is withheld if any positive cell is too small",
     x = NULL, y = "Share of credits", fill = "Delegated task type"
   )
+}
 ```
 
 Usage segments {data-icon="fa-users"}
@@ -1068,8 +1105,12 @@ segment_credit <- segment_snapshot |>
   count(Segment, CreditQuartile, name = "People") |>
   group_by(Segment) |>
   mutate(Share = People / sum(People)) |>
-  ungroup()
+  ungroup() |>
+  disclose_breakdown(MIN_GROUP_N)
 
+if (!nrow(segment_credit)) {
+  cat("Credit-volume breakdown withheld: at least one positive cell is below the disclosure floor. No residual shares are published.")
+} else {
 ggplot(segment_credit, aes(Segment, Share, fill = CreditQuartile)) +
   geom_col(width = 0.68) +
   coord_flip() +
@@ -1085,6 +1126,7 @@ ggplot(segment_credit, aes(Segment, Share, fill = CreditQuartile)) +
     ),
     x = NULL, y = NULL, fill = "Credit-volume group"
   )
+}
 ```
 
 ### Why keep both?
@@ -1185,7 +1227,8 @@ ggplot(steps, aes(x, 1)) +
 | Credit quartiles | Calculate among positive users and retain non-users separately |
 | Reasoning profile | Require sufficient token volume before classifying the token mix |
 | Network measures | Treat internal and external network size as stock measures; never sum them across weeks |
-| Privacy | Suppress organisational groups below the approved minimum population |
+| Privacy | Withhold the entire segment/task cross-tab if any positive cell is below the approved minimum; never publish reconstructable residuals |
+| Task allocation | Validate unique person/task/window keys and reconcile to each person's full-window weekly credits before plotting; fail on mismatch |
 
 Row {data-height=390}
 -------------------------------------
@@ -1226,6 +1269,9 @@ templates/sample-code/utility-r/_data/consumption/
 
 They are intended for demonstrations, workshops and adaptation of the template.
 They contain no customer data or real identifiers.
+The task allocation is generated locally from the same-window weekly credit
+totals by `generate-demo-data.R`; it is not an independently measured task feed.
+See `_data/README.md` for provenance, seeds and the inclusive window contract.
 
 Row {data-height=430}
 -------------------------------------
@@ -1259,3 +1305,9 @@ or business value.
 4. Recompute credit weights from the applicable governed rate card.
 5. Keep person-level averaging so each person carries equal analytical weight.
 6. Retain the privacy threshold and the organisational composition checks.
+7. Reconcile task-feed coverage, dates and person totals before interpreting task
+   shares. A mismatch stops this example; do not rescale the feed to conceal it.
+
+This synthetic demonstration is not a disclosure certification for tenant data.
+In particular, concentration curves and distribution plots require an approved
+release policy beyond subgroup-count checks before any real-data publication.
