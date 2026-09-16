@@ -1032,10 +1032,11 @@ credit_tasks |>
   group_by(CreditBand, TaskType) |>
   summarise(Credits = sum(credits), People = n_distinct(PersonId),
             .groups = "drop") |>
-  filter(People >= MIN_GROUP_N) |>
   group_by(CreditBand) |>
-  mutate(Share = Credits / sum(Credits)) |>
+  mutate(TotalCredits = sum(Credits),
+         Share = Credits / TotalCredits) |>
   ungroup() |>
+  filter(People >= MIN_GROUP_N) |>
   ggplot(aes(CreditBand, Share, fill = reorder(TaskType, Share))) +
   geom_col(width = 0.68) +
   geom_text(
@@ -1049,7 +1050,7 @@ credit_tasks |>
   theme_t() +
   labs(
     title = "Credit mix by delegated task type",
-    subtitle = "Share of credits by delegated task type, for high-credit and lower-credit groups",
+    subtitle = "Visible task types retain the full credit denominator; suppressed types are not shown",
     x = NULL, y = "Share of credits", fill = "Delegated task type"
   )
 ```

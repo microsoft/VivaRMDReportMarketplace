@@ -50,7 +50,7 @@ pq_data$IsLargeNetwork <- ifelse(pq_data$Internal_network_size > 40, 1, 0)
 
 We can then define a list of predictors, and assign this to `predictor_list.`
 
-As shown below, `create_IV()` is the primary function for analyzing and visualizing Information Value for a selected outcome variable. We use the `predictors` argument to supply the list of predictors, and `outcome` to specify which varible to use as the dependent variable.
+As shown below, `create_IV()` is the primary function for analyzing and visualizing Information Value for a selected outcome variable. We use the `predictors` argument to supply the list of predictors, and `outcome` to specify which variable to use as the dependent variable.
 
 In `return`, we specify a plot to be returned:
 

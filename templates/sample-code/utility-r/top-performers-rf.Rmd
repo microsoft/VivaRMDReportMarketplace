@@ -41,6 +41,16 @@ The next step here is to load in the dataset, and then examine the data. In our 
 # Set path to direct to where the Person Query is saved
 raw_data <- vivainsights::import_query("_data/Top_Performers_Dataset_v2.csv")
 
+# Aggregate repeated Person Query rows before splitting so each person belongs
+# to exactly one of the training or test sets.
+raw_data <- raw_data |>
+  group_by(PersonId) |>
+  summarise(
+    across(where(is.numeric) & !any_of("performance"), ~mean(.x, na.rm = TRUE)),
+    performance = first(performance),
+    .groups = "drop"
+  )
+
 # Examine the data
 head(raw_data)
 ```
@@ -154,7 +164,7 @@ actual <- test_df_with_pred$perform_cat
 predicted <- test_df_with_pred$predictions
 
 # Create a confusion matrix
-cm <- confusionMatrix(predicted, actual)
+cm <- confusionMatrix(predicted, actual, positive = "1")
 
 # Accuracy
 accuracy <- cm$overall['Accuracy']
@@ -186,7 +196,7 @@ We also generated a number of metrics for assessing the model. The first four me
  F1 = 2 * (precision * recall) / (precision + recall)
  ```
 
-All of these metrics can be calculated directly from a **Confusion Matrix**, which is a table that is often used to describe the performance of a classification model on a set of data for which the true values are known. It contains information about actual and predicted classifications done by the classifier. It's a good way to visualize the performance of the model. In R, this is generated with the `confsionMatrix()` function from **caret**.
+All of these metrics can be calculated directly from a **Confusion Matrix**, which is a table that is often used to describe the performance of a classification model on a set of data for which the true values are known. It contains information about actual and predicted classifications done by the classifier. It's a good way to visualize the performance of the model. In R, this is generated with the `confusionMatrix()` function from **caret**.
 
 The choice of metric depends on your business objective. For example, if the cost of having false positives is high, the strategy might be to optimize for precision; this arguably applies to a top performers use case, where it is preferred that the model predicts fewer top performers. If the cost of missing positives (having false negatives) is high, the strategy might be to optimize for recall, which could be more relevant for an attrition use case.
 
@@ -197,19 +207,19 @@ cm$table
 ```
 See below for a guide on how to interpret the confusion matrix:
 
-A confusion matrix is a table that is often used to describe the performance of a classification model on a set of data for which the true values are known. In binary classification, the confusion matrix is a 2x2 matrix. Here's how to interpret it:
+A confusion matrix is a table that is often used to describe the performance of a classification model on a set of data for which the true values are known. In binary classification, the confusion matrix is a 2x2 matrix. `caret::confusionMatrix()` places predictions in rows and actual reference classes in columns. Here's how to interpret it:
 
-- The first row of the matrix represents the instances in the actual class (true class) - in this case, it's the negative class.
-- The second row of the matrix represents the instances in the actual class (true class) - in this case, it's the positive class.
-- The first column of the matrix represents the instances in the predicted class - in this case, it's the negative class.
-- The second column of the matrix represents the instances in the predicted class - in this case, it's the positive class.
+- The first row of the matrix represents predictions for the negative class.
+- The second row of the matrix represents predictions for the positive class.
+- The first column represents actual observations in the negative class.
+- The second column represents actual observations in the positive class.
 
 So, the confusion matrix looks like this:
 
-|                    | Predicted Negative | Predicted Positive |
-|--------------------|--------------------|--------------------|
-| **Actual Negative**| True Negative (TN) | False Positive (FP)|
-| **Actual Positive**| False Negative (FN)| True Positive (TP) |
+|                    | Actual Negative | Actual Positive |
+|--------------------|-----------------|-----------------|
+| **Predicted Negative**| True Negative (TN) | False Negative (FN)|
+| **Predicted Positive**| False Positive (FP)| True Positive (TP) |
 
 - **True Positives (TP)**: These are cases in which we predicted yes (positive), and the actual was also yes (positive).
 - **True Negatives (TN)**: We predicted no (negative), and the actual was also no (negative).
@@ -408,7 +418,7 @@ tune_rf_mtry <- function(mtry){
 }
 
 auc_mtry <-
-  seq(1, 6) %>%
+  seq_len(ncol(train_df) - 1L) %>%
   purrr::map(tune_rf_mtry) %>%
   bind_rows()
 

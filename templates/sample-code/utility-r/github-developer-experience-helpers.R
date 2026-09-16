@@ -131,7 +131,7 @@ gh_daily <- daily_grid |>
          accepted = rbinom(n(),suggested,.53),
          chat = active * rpois(n(),gh_intensity * .25),
          agent = as.integer(active == 1 & runif(n()) < .32)) |>
-  filter(suggested + chat > 0) |>
+  filter(suggested + chat + agent > 0) |>
   transmute(PersonId, MetricDate, Week,
             `Code completions suggested` = suggested,
             `Code completions accepted` = accepted,
@@ -320,7 +320,7 @@ interval_data <- function(data, metrics, group='Team') {
     source <- data |> mutate(MetricDate=baseline_start)
     result <- vivainsights::create_boxplot(source,metric=m,hrvar=group,
                   mingroup=MIN_GROUP_N,return='table')
-    result |> transmute(Group=as.character(group),Metric=unname(metric_labels[m]),
+    result |> transmute(Group=as.character(.data[[group]]),Metric=unname(metric_labels[m]),
                         p25,p50,p75)
   }))
 }

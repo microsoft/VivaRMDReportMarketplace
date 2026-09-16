@@ -151,7 +151,7 @@ panel_es |> distinct(PersonId, group) |> count(group)
 
 We fit `y ~ treat_post | PersonId + MetricDate` (person + week fixed effects,
 person-clustered SE) for every metric, then record the effect, its 95% CI, the
-p-value, significance stars, and the effect as a share of the Power group's
+p-value adjusted across the metric scan, significance stars, and the effect as a share of the Power group's
 pre-adoption baseline.
 
 ```{r scan}
@@ -174,13 +174,16 @@ run_did <- function(metric) {
     conf_low        = ci[[1]],
     conf_high       = ci[[2]],
     p_value         = ct[["Pr(>|t|)"]],
-    sig             = stars(ct[["Pr(>|t|)"]]),
     baseline_pre    = base_pre,
     pct_of_baseline = ct[["Estimate"]] / base_pre
   )
 }
 
 results <- purrr::map_dfr(names(EFFECTS), run_did) |>
+  mutate(
+    p_adjusted = p.adjust(p_value, method = "BH"),
+    sig = stars(p_adjusted)
+  ) |>
   arrange(desc(estimate))
 
 results |>
@@ -188,15 +191,16 @@ results |>
     estimate        = round(estimate, 3),
     `95% CI`        = sprintf("[%+.2f, %+.2f]", conf_low, conf_high),
     `% of baseline` = scales::percent(pct_of_baseline, accuracy = 0.1),
-    p_value         = signif(p_value, 2)
+    p_value         = signif(p_value, 2),
+    p_adjusted      = signif(p_adjusted, 2)
   ) |>
   select(Metric = metric, `Δ (units)` = estimate, `95% CI`,
-         `% of baseline`, p = p_value, Sig = sig) |>
+         `% of baseline`, p = p_value, `p (BH)` = p_adjusted, Sig = sig) |>
   knitr::kable(caption = "Power vs Low DiD: one row per metric, sorted by effect")
 ```
 
 Read the table as: *within-person, Power users changed this metric by `Δ` more
-than Low users did after adoption.* The `Sig` column separates real signals from
+than Low users did after adoption.* The `Sig` column separates signals from
 noise, and note the deliberately null metric lands **n.s.**, which is exactly the
 kind of honest result this scan is meant to surface.
 

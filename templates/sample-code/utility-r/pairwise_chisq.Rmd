@@ -56,7 +56,10 @@ In the following, we first use `combn()` to generate all combinations of variabl
 
 Next, we use `map_dfr()` from the **purrr** package to loop over each combination and perform a chi-square test. The operation is similar to a for loop, but the results are row-bound (similar to `rbind()` or `bind_rows()`) and returned as a data frame. In R, it is generally more efficient to use `map()` functions from the **purrr** package than to use for loops.
 
-Towards the end of the code, we add a significance level to the results based on the p-value. The significance level is denoted by asterisks, where `***` indicates p < 0.001, `**` indicates p < 0.01, and `*` indicates p < 0.05.
+Towards the end of the code, we add a significance level to the results based
+on the Benjamini-Hochberg adjusted p-value. The significance level is denoted
+by asterisks, where `***` indicates adjusted p < 0.001, `**` indicates
+adjusted p < 0.01, and `*` indicates adjusted p < 0.05.
 
 ```{r}
 # Generate all combinations of variable pairs
@@ -74,23 +77,26 @@ results_df <-
   # Perform chi-square test
   chi_test <- chisq.test(contingency_table)
 
-  # Return data frame with results
+  # Return data frame with raw p-values
   tibble(
     var1 = var1,
     var2 = var2,
     chi2 = chi_test$statistic,
     p = chi_test$p.value,
     n = sum(contingency_table)
-  ) %>%
-    # Add significance level
-    mutate(
-      significance = case_when(
-        p < 0.001 ~ "***",
-        p < 0.01 ~ "**",
-        p < 0.05 ~ "*",
-        TRUE ~ ""
-    ))
+  )
 })
+
+results_df <- results_df %>%
+  mutate(
+    p_adjusted = p.adjust(p, method = "BH"),
+    significance = case_when(
+      p_adjusted < 0.001 ~ "***",
+      p_adjusted < 0.01 ~ "**",
+      p_adjusted < 0.05 ~ "*",
+      TRUE ~ ""
+    )
+  )
 
 print(results_df)
 ```
