@@ -65,6 +65,7 @@ The current report templates are available:
 - [Minimal report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/minimal-example) - as a minimal example of the report that can be produced with the above workflow. 
 - [Employee Experience Report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/exp-report) - a report on the Employee Experience Index. 
 - [Right to Disconnect Report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/rtd-report) - a report on collaboration metrics related to the Right to Disconnect, including an analysis on weekends. 
+- [Viva Insights sample-code templates](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/sample-code) - selected RMarkdown examples for collaboration, Copilot, network, causal, and modelling analyses, copied from the Viva Insights sample-code repository.
 
 
 ## References
