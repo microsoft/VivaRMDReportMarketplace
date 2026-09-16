@@ -41,16 +41,6 @@ The next step here is to load in the dataset, and then examine the data. In our 
 # Set path to direct to where the Person Query is saved
 raw_data <- vivainsights::import_query("_data/Top_Performers_Dataset_v2.csv")
 
-# Aggregate repeated Person Query rows before splitting so each person belongs
-# to exactly one of the training or test sets.
-raw_data <- raw_data |>
-  group_by(PersonId) |>
-  summarise(
-    across(where(is.numeric) & !any_of("performance"), ~mean(.x, na.rm = TRUE)),
-    performance = first(performance),
-    .groups = "drop"
-  )
-
 # Examine the data
 head(raw_data)
 ```
@@ -65,39 +55,43 @@ There are typically a number of data preparation and validation procedures invol
 
 In this notebook, we will assume that the dataset is in decent quality, and all that is required are the standard procedures of changing variable types and splitting data into train/test sets.
 
-We start off by dropping any non-numeric columns (`PersonId` in this case). It is optional, but we also convert the `performance` variable into a binary variable (`perform_cat`), so we would yield a classification model. This step is for demo purposes as there are more use cases where the outcome variable is binary rather than ordinal or continuous.
+It is optional, but we convert the `performance` variable into a binary variable (`perform_cat`), so we would yield a classification model. This step is for demo purposes as there are more use cases where the outcome variable is binary rather than ordinal or continuous. We retain `PersonId` for now, as it is needed to split the data by person, and drop it prior to fitting the model.
 
 ```{r}
 clean_data <-
   raw_data %>%
   mutate(perform_cat = ifelse(performance >= 4, 1, 0)) %>% # Create binary variable
   mutate(perform_cat = factor(perform_cat)) %>% # ensures model is classification
-  select(-PersonId, -performance) # drop unnecessary columns
+  select(-performance) # drop unnecessary columns
 
 head(clean_data)
 ```
 
-The `createDataPartition()` function from **caret** makes it easy to split the data into training and testing datasets. In the following example, the parameters are provided in this order: (i) data frame containing the predictor variables only, (ii) data frame containing the outcome variable only, and (iii) `test_size` controlling the proportion of the dataset to include in the train split.
+The `createDataPartition()` function from **caret** makes it easy to split the data into training and testing datasets, where the `p` argument controls the proportion of the data that goes into the training set.
 
-This is assigned to four data frames:
-- `x_train` - predictors, train set
-- `x_test` - predictors, test set
-- `y_train` - outcome, train set
-- `y_test` - outcome, test set
+The checked-in demo dataset contains multiple rows per person, so we partition the unique people rather than the individual rows. If we split rows directly, records belonging to the same person could appear in both sets, which leaks information across the split and makes the reported test metrics overly optimistic. Once the split is made, `PersonId` is no longer needed and is dropped from both data frames.
 
 ```{r}
 # Set randomisation split
 set.seed(123)
 
-# Split data into training and testing sets
+# One row per person, used as the unit of the split
+person_data <-
+  clean_data %>%
+  group_by(PersonId) %>%
+  summarise(perform_cat = first(perform_cat), .groups = "drop")
+
+# Split people into training and testing sets
 trainIndex <- caret::createDataPartition(
-  y = clean_data$perform_cat, # outcome
+  y = person_data$perform_cat, # outcome
   p = 0.7, # percentage goes into training
   list = FALSE # do not return result as list
   )
 
-train_df <- clean_data[trainIndex, ]
-test_df <- clean_data[-trainIndex, ]
+train_ids <- person_data$PersonId[trainIndex]
+
+train_df <- clean_data %>% filter(PersonId %in% train_ids) %>% select(-PersonId)
+test_df <- clean_data %>% filter(!(PersonId %in% train_ids)) %>% select(-PersonId)
 ```
 
 
