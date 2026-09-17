@@ -4,8 +4,22 @@ stopifnot(all(args %in% "--usage-only"))
 usage_only <- "--usage-only" %in% args
 script <- sub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE))
 test_dir <- dirname(normalizePath(script))
-src <- Sys.getenv("SAMPLE_CODE_DIR", unset = dirname(test_dir))
-setwd(src)
+repo_root <- normalizePath(file.path(test_dir, "..", ".."))
+topic_file <- function(topic, file) file.path(repo_root, "templates", topic, file)
+topics <- list(
+  collaboration = "collaboration-by-time-of-day",
+  consumption = "copilot-consumption",
+  usage = "copilot-usage-segments",
+  networks = "custom-networks",
+  causal = "causal-analysis",
+  github = "github-developer-experience",
+  information_value = "information-value",
+  meeting = "meeting-engagement-drivers",
+  chisq = "pairwise-chi-square",
+  rf = "top-performers-random-forest"
+)
+file_for <- function(topic, file) topic_file(topics[[topic]], file)
+setwd(repo_root)
 suppressPackageStartupMessages({
   library(dplyr)
   library(tidyr)
@@ -31,10 +45,22 @@ chunk_code <- function(file, pattern) {
   blocks[[which(found)]]$code
 }
 run_chunk <- function(file, pattern, env) {
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(dirname(normalizePath(file)))
   old <- knitr::knit_global()
-  on.exit(knitr::knit_global(old))
+  on.exit(knitr::knit_global(old), add = TRUE)
   knitr::knit_global(env)
   invisible(eval(parse(text = chunk_code(file, pattern)), env))
+}
+eval_chunks <- function(file, env) {
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(dirname(normalizePath(file)))
+  for (block in chunks(file)) {
+    if (!grepl("eval=FALSE", block$header, fixed = TRUE))
+      invisible(eval(parse(text = block$code), env))
+  }
 }
 must_fail <- function(expr) {
   stopifnot(inherits(tryCatch({force(expr); NULL}, error = identity), "error"))
@@ -56,19 +82,40 @@ new_env <- function() new.env(parent = globalenv())
 
 check("PARSE", {
   n_chunks <- 0L
-  for (file in list.files(pattern = "\\.Rmd$")) {
+  rmd_files <- c(
+    file_for("collaboration", "collaboration-by-time-of-day.Rmd"),
+    file_for("usage", "copilot-usage-segments-trend.Rmd"),
+    file_for("consumption", "copilot-consumption-ways-of-working-simulation.Rmd"),
+    file_for("networks", "custom-network-p2p.Rmd"),
+    file_for("networks", "custom-network-g2g.Rmd"),
+    file_for("causal", "evaluate-intervention.Rmd"),
+    file_for("causal", "did-metric-scan.Rmd"),
+    file_for("causal", "event-study-did.Rmd"),
+    file_for("github", "github-copilot-developer-productivity-simulation.Rmd"),
+    file_for("information_value", "information-value.Rmd"),
+    file_for("meeting", "meeting-engagement-drivers.Rmd"),
+    file_for("chisq", "pairwise_chisq.Rmd"),
+    file_for("rf", "top-performers-rf.Rmd")
+  )
+  for (file in rmd_files) {
     for (block in chunks(file)) {
       parse(text = block$code)
       n_chunks <- n_chunks + 1L
     }
   }
-  for (file in list.files(pattern = "\\.R$", recursive = TRUE)) parse(file)
+  for (file in c(
+    file_for("consumption", "consumption-contracts.R"),
+    file_for("consumption", "generate-demo-data.R"),
+    file_for("github", "github-developer-experience-helpers.R"),
+    file_for("github", "render-github-developer-experience.R"),
+    file_for("rf", "generate-demo-data.R")
+  )) parse(file)
   cat("Parsed all", n_chunks, "R chunks, including eval=FALSE, and all R helpers/tests.\n")
 })
 
 check("F-01", {
   env <- new_env()
-  helper <- parse("github-developer-experience-helpers.R")
+  helper <- parse(file_for("github", "github-developer-experience-helpers.R"))
   fun <- Filter(function(x) is.call(x) && identical(x[[1]], as.name("<-")) &&
                   identical(x[[2]], as.name("interval_data")), as.list(helper))
   stopifnot(length(fun) == 1L)
@@ -87,12 +134,9 @@ check("F-01", {
 })
 
 check("F-02", {
-  file <- "pairwise_chisq.Rmd"
+  file <- file_for("chisq", "pairwise_chisq.Rmd")
   env <- new_env()
-  for (block in chunks(file)) {
-    if (!grepl("eval=FALSE", block$header, fixed = TRUE))
-      invisible(eval(parse(text = block$code), env))
-  }
+  eval_chunks(file, env)
   stopifnot(all(env$results_df$n <= n_distinct(env$sample_data_merged$PersonId)))
   original <- env$results_df
   env$sample_data_merged <- bind_rows(env$sample_data_merged, env$sample_data_merged)
@@ -113,7 +157,7 @@ check("F-02", {
 
 did_env <- new_env()
 check("F-03", {
-  file <- "did-metric-scan.Rmd"
+  file <- file_for("causal", "did-metric-scan.Rmd")
   for (part in c("setup", "analysis-config", "simulate", "event-time", "scan"))
     run_chunk(file, paste0("^```\\{r ", part, "[,}]"), did_env)
   did_env$panel_es$Emails_sent <- 10 + 2 * did_env$panel_es$post
@@ -127,14 +171,14 @@ check("F-04", {
   env <- new_env()
   env$model_df <- tibble(duration_min = c(90, 120),
                          chats_per_att = c(45, 60), emails_per_att = c(45, 60))
-  run_chunk("meeting-engagement-drivers.Rmd", "dose <-", env)
+  run_chunk(file_for("meeting", "meeting-engagement-drivers.Rmd"), "dose <-", env)
   stopifnot(nrow(env$dose) == 1L, env$dose$msgs_per_att == 105,
             abs(env$dose$msgs_per_att_permin - 1) < 1e-12)
 })
 
 rf_env <- new_env()
 check("F-05", {
-  file <- "top-performers-rf.Rmd"
+  file <- file_for("rf", "top-performers-rf.Rmd")
   for (part in c("setup", "load-data", "preparation", "person-split"))
     run_chunk(file, paste0("^```\\{r ", part, "[,}]"), rf_env)
   stopifnot(!anyDuplicated(unlist(rf_env$partition)),
@@ -165,14 +209,14 @@ check("F-05", {
 
 check("F-06", {
   rm(list = intersect(c("EFFECTS", "grid", "persons"), ls(did_env)), envir = did_env)
-  run_chunk("did-metric-scan.Rmd", "^```\\{r scan[,}]", did_env)
+  run_chunk(file_for("causal", "did-metric-scan.Rmd"), "^```\\{r scan[,}]", did_env)
   stopifnot(setequal(did_env$results$metric, did_env$METRICS))
   env <- new_env()
   for (part in c("setup", "analysis-config", "simulate"))
-    run_chunk("event-study-did.Rmd", paste0("^```\\{r ", part, "[,}]"), env)
+    run_chunk(file_for("causal", "event-study-did.Rmd"), paste0("^```\\{r ", part, "[,}]"), env)
   rm(list = intersect(c("TREATMENT_EFFECT", "persons", "week_shock"), ls(env)), envir = env)
   for (part in c("event-time", "twfe", "event-study", "composite"))
-    run_chunk("event-study-did.Rmd", paste0("^```\\{r ", part, "[,}]"), env)
+    run_chunk(file_for("causal", "event-study-did.Rmd"), paste0("^```\\{r ", part, "[,}]"), env)
   stopifnot(is.finite(env$did_beta),
             setequal(env$panel_es$MetricDate[env$panel_es$treated_grp == 1],
                      env$panel_es$MetricDate[env$panel_es$treated_grp == 0]))
@@ -181,22 +225,23 @@ check("F-06", {
 
 cons_env <- new_env()
 check("F-07", {
-  run_chunk("copilot-consumption-ways-of-working-simulation.Rmd", "setup", cons_env)
+  consumption_rmd <- file_for("consumption", "copilot-consumption-ways-of-working-simulation.Rmd")
+  run_chunk(consumption_rmd, "setup", cons_env)
   p <- cons_env$person_base
   insufficient <- p$ReasoningProfile == "Insufficient token volume"
   stopifnot(sum(insufficient) > 0,
             all(p$ConsumptionProfile[insufficient] == "Insufficient token volume"))
-  run_chunk("copilot-consumption-ways-of-working-simulation.Rmd",
+  run_chunk(consumption_rmd,
             "^```\\{r reasoning-profile[,}]", cons_env)
   stopifnot(sum(cons_env$profile_summary$People) == sum(p$positive_consumer & !insufficient),
             nrow(p) == nrow(cons_env$people))
 })
 
 check("F-08", {
-  source("generate-demo-data.R", local = TRUE)
-  source("consumption-contracts.R", local = TRUE)
-  weekly <- read.csv("_data/consumption/consumption-query/consumption-weekly.csv")
-  tasks <- read.csv("_data/consumption/consumption-query/consumption-task-types.csv")
+  source(file_for("consumption", "generate-demo-data.R"), local = TRUE)
+  source(file_for("consumption", "consumption-contracts.R"), local = TRUE)
+  weekly <- read.csv(file_for("consumption", "_data/consumption/consumption-query/consumption-weekly.csv"))
+  tasks <- read.csv(file_for("consumption", "_data/consumption/consumption-query/consumption-task-types.csv"))
   totals <- validate_task_credits(weekly, tasks)
   stopifnot(isTRUE(all.equal(tasks, generate_credit_tasks(weekly))),
             identical(generate_credit_tasks(weekly), generate_credit_tasks(weekly)))
@@ -209,7 +254,7 @@ check("F-08", {
   must_fail(validate_task_credits(weekly, tasks[-1, ]))
   must_fail(validate_task_credits(weekly, rbind(tasks, tasks[1, ])))
   cat("Weekly/task credits:", sum(totals$WeeklyCredits), sum(totals$TaskCredits), "\n")
-  run_chunk("copilot-consumption-ways-of-working-simulation.Rmd", "task-mix", cons_env)
+  run_chunk(consumption_rmd, "task-mix", cons_env)
   check_totals <- cons_env$task_mix |> group_by(CreditBand) |>
     summarise(share = sum(Share), credits = sum(Credits), total = first(TotalCredits))
   stopifnot(nrow(check_totals) == 2L, all(abs(check_totals$share - 1) < 1e-12),
@@ -217,14 +262,14 @@ check("F-08", {
 })
 
 check("F-09", {
-  source("consumption-contracts.R", local = TRUE)
+  source(file_for("consumption", "consumption-contracts.R"), local = TRUE)
   boundary <- tibble(Segment = c("A", "A", "B", "B"), People = c(80, 2, 20, 30))
   stopifnot(nrow(disclose_breakdown(boundary, 10)) == 0L)
   boundary$People[2] <- 0
   stopifnot(nrow(disclose_breakdown(boundary, 10)) == 4L)
   boundary$People[2] <- 10
   stopifnot(nrow(disclose_breakdown(boundary, 10)) == 4L)
-  run_chunk("copilot-consumption-ways-of-working-simulation.Rmd", "segment-credit", cons_env)
+  run_chunk(consumption_rmd, "segment-credit", cons_env)
   stopifnot(nrow(cons_env$segment_credit) == 0L)
   # A zero-credit contributor cannot make a two-person positive task cell safe.
   cons_env$credit_tasks <- tibble(
@@ -234,12 +279,12 @@ check("F-09", {
   )
   cons_env$person_base <- tibble(PersonId = paste0("SMALL", 1:30),
                                 CreditBand = "High credit", total_credits = 1)
-  run_chunk("copilot-consumption-ways-of-working-simulation.Rmd", "task-mix", cons_env)
+  run_chunk(consumption_rmd, "task-mix", cons_env)
   stopifnot(nrow(cons_env$task_mix) == 0L)
 })
 
 check("F-10", {
-  text <- paste(readLines("top-performers-rf.Rmd"), collapse = "\n")
+  text <- paste(readLines(file_for("rf", "top-performers-rf.Rmd")), collapse = "\n")
   stopifnot(!is.null(rf_env$rf), !is.null(rf_env$selected),
             !grepl("668 correct|0\\.57%|29 correct|2 out of 670", text),
             grepl("`r rf\\$ntree`", text), grepl("rf\\$err.rate", text),
@@ -248,15 +293,19 @@ check("F-10", {
 })
 
 check("H-01", {
-  source("generate-demo-data.R", local = TRUE)
-  fixture <- read.csv("_data/Top_Performers_Dataset_v2.csv")
+  source(file_for("rf", "generate-demo-data.R"), local = TRUE)
+  fixture <- read.csv(file_for("rf", "_data/Top_Performers_Dataset_v2.csv"))
   stopifnot(all(grepl("^SYNTH_RF_[0-9]{4}$", fixture$PersonId)),
             identical(generate_top_performers(), generate_top_performers()),
             isTRUE(all.equal(fixture, generate_top_performers())))
 })
 
 check("H-02", {
-  for (file in c("did-metric-scan.Rmd", "event-study-did.Rmd", "evaluate-intervention.Rmd")) {
+  for (file in c(
+    file_for("causal", "did-metric-scan.Rmd"),
+    file_for("causal", "event-study-did.Rmd"),
+    file_for("causal", "evaluate-intervention.Rmd")
+  )) {
     text <- paste(readLines(file), collapse = " ")
     stopifnot(grepl("educational", text, ignore.case = TRUE),
               grepl("not a supported|not supported|not a.*supported|not a real-data",
@@ -266,7 +315,7 @@ check("H-02", {
 })
 
 check("F-13", {
-  file <- "copilot-usage-segments-trend.Rmd"
+  file <- file_for("usage", "copilot-usage-segments-trend.Rmd")
   expected_cols <- c(
     "Copilot_actions_taken_in_Teams",
     "Copilot_actions_taken_in_Copilot_chat__work_",
