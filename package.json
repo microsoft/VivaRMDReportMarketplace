@@ -1,0 +1,13 @@
+{
+  "name": "viva-rmarkdown-report-marketplace",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Static catalogue and GitHub Pages build for Viva RMarkdown report templates.",
+  "scripts": {
+    "site:build": "node scripts/build-site.mjs",
+    "site:validate": "node scripts/build-site.mjs --validate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
