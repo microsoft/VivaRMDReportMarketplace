@@ -1261,7 +1261,7 @@ The following effects are deliberately modest:
 The uncompressed source-shaped CSVs sit under:
 
 ```text
-templates/sample-code/utility-r/_data/consumption/
+_data/consumption/
   consumption-query/
   person-query/
   reference/
@@ -1271,7 +1271,8 @@ They are intended for demonstrations, workshops and adaptation of the template.
 They contain no customer data or real identifiers.
 The task allocation is generated locally from the same-window weekly credit
 totals by `generate-demo-data.R`; it is not an independently measured task feed.
-See `_data/README.md` for provenance, seeds and the inclusive window contract.
+See the topic [README](README.md) for fixture provenance, generator seed and
+the inclusive observation-window contract.
 
 Row {data-height=430}
 -------------------------------------

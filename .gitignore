@@ -38,13 +38,14 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 *.R
-!templates/sample-code/utility-r/github-developer-experience-helpers.R
-!templates/sample-code/utility-r/render-github-developer-experience.R
-!templates/sample-code/utility-r/generate-demo-data.R
-!templates/sample-code/utility-r/consumption-contracts.R
-!templates/sample-code/utility-r/tests/
-!templates/sample-code/utility-r/tests/*.R
-templates/sample-code/utility-r/_data/github/
+!templates/copilot-consumption/consumption-contracts.R
+!templates/copilot-consumption/generate-demo-data.R
+!templates/github-developer-experience/github-developer-experience-helpers.R
+!templates/github-developer-experience/render-github-developer-experience.R
+!templates/top-performers-random-forest/generate-demo-data.R
+!templates/tests/
+!templates/tests/*.R
+templates/github-developer-experience/_data/github/
 templates/exp-report/exp report testing only.html
 templates/exp-report/exp report.html
 templates/exp-report/*.csv

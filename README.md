@@ -65,7 +65,16 @@ The current report templates are available:
 - [Minimal report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/minimal-example) - as a minimal example of the report that can be produced with the above workflow. 
 - [Employee Experience Report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/exp-report) - a report on the Employee Experience Index. 
 - [Right to Disconnect Report](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/rtd-report) - a report on collaboration metrics related to the Right to Disconnect, including an analysis on weekends. 
-- [Viva Insights sample-code templates](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/sample-code) - locally adapted examples for collaboration, Copilot, networks and modelling, plus educational causal simulations (not supported real-data causal recipes), originally imported from the Viva Insights sample-code repository.
+- [Collaboration by time of day](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/collaboration-by-time-of-day) - a descriptive view of collaboration timing.
+- [Copilot usage segments](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/copilot-usage-segments) - a trend example using six named Copilot action metrics.
+- [Copilot consumption](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/copilot-consumption) - a synthetic consumption and ways-of-working simulation.
+- [Custom networks](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/custom-networks) - person-to-person and group-to-group network visual examples.
+- [Causal analysis](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/causal-analysis) - educational intervention, difference-in-differences and event-study simulations; these are not supported real-data causal recipes.
+- [GitHub developer experience](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/github-developer-experience) - a synthetic developer-productivity simulation.
+- [Information value](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/information-value) - an illustrative information-value analysis.
+- [Meeting engagement drivers](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/meeting-engagement-drivers) - a descriptive meeting-engagement model.
+- [Pairwise chi-square](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/pairwise-chi-square) - pairwise association tests for categorical person attributes.
+- [Top performers random forest](https://github.com/microsoft/VivaRMDReportMarketplace/tree/main/templates/top-performers-random-forest) - a training-only model using entirely synthetic labels.
 
 
 ## References
