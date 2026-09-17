@@ -15,6 +15,10 @@ The goal of this project is two-fold:
 - Provide a greater choice of reports through the Report marketplace
 - Enable users to easily customize an existing report and contribute this back to the community
 
+## Browse reports online
+
+The report catalogue is published through [GitHub Pages](https://microsoft.github.io/VivaRMDReportMarketplace/) after changes merge to `main`. It provides links to the rendered demonstrations, RMarkdown source and topic documentation without requiring a local clone.
+
 ## Instructions
 
 Each report template subdirectory should have the following elements:
@@ -28,6 +32,17 @@ Each report template subdirectory should have the following elements:
     - example snippet for running the report
 
 Note that your pull request may be rejected if you do not include all of the above information. 
+
+### Maintaining the online catalogue
+
+The Pages catalogue is generated from `site/report-metadata.json`. When adding or changing a report topic, update its corresponding entry in that file with its title, summary, categories, tags and every published HTML/RMarkdown preview pair. Run the following from the repository root before opening a pull request:
+
+```powershell
+npm run site:validate
+npm run site:build
+```
+
+Validation checks that each registered topic has its `README.md`, RMarkdown source and rendered HTML demonstration. The generated `_site` directory is a local build artefact and is not committed.
 
 See `minimal-example` in this repository for an example.
 

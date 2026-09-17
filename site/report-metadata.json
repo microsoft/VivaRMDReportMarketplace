@@ -1,0 +1,174 @@
+[
+  {
+    "slug": "causal-analysis",
+    "title": "Educational Causal Analysis",
+    "summary": "Intervention, difference-in-differences and event-study simulations for learning and discussion.",
+    "category": "Analysis methods",
+    "reportType": "RMarkdown",
+    "dataScope": "Synthetic",
+    "complexity": "Advanced",
+    "tags": ["causal inference", "event study", "difference-in-differences"],
+    "previews": [
+      { "title": "Intervention evaluation", "html": "evaluate-intervention.html", "source": "evaluate-intervention.Rmd" },
+      { "title": "Difference-in-differences scan", "html": "did-metric-scan.html", "source": "did-metric-scan.Rmd" },
+      { "title": "Event-study difference-in-differences", "html": "event-study-did.html", "source": "event-study-did.Rmd" }
+    ]
+  },
+  {
+    "slug": "collaboration-by-time-of-day",
+    "title": "Collaboration by Time of Day",
+    "summary": "Describe when collaboration occurs through the working day using person-query data.",
+    "category": "Collaboration",
+    "reportType": "RMarkdown",
+    "dataScope": "Sample data",
+    "complexity": "Starter",
+    "tags": ["collaboration", "time of day", "descriptive"],
+    "previews": [
+      { "title": "Collaboration by time of day", "html": "collaboration-by-time-of-day.html", "source": "collaboration-by-time-of-day.Rmd" }
+    ]
+  },
+  {
+    "slug": "copilot-consumption",
+    "title": "Copilot Consumption",
+    "summary": "Explore synthetic Copilot credit consumption and associated ways-of-working patterns.",
+    "category": "Copilot",
+    "reportType": "Flexdashboard",
+    "dataScope": "Synthetic",
+    "complexity": "Intermediate",
+    "tags": ["Copilot", "consumption", "ways of working"],
+    "previews": [
+      { "title": "Consumption and ways of working", "html": "copilot-consumption-ways-of-working-simulation.html", "source": "copilot-consumption-ways-of-working-simulation.Rmd" }
+    ]
+  },
+  {
+    "slug": "copilot-usage-segments",
+    "title": "Copilot Usage Segments",
+    "summary": "Assign illustrative Copilot usage segments and examine their trend over time.",
+    "category": "Copilot",
+    "reportType": "RMarkdown",
+    "dataScope": "User-provided data",
+    "complexity": "Intermediate",
+    "tags": ["Copilot", "segments", "adoption"],
+    "previews": [
+      { "title": "Copilot usage segment trend", "html": "copilot-usage-segments-trend.html", "source": "copilot-usage-segments-trend.Rmd" }
+    ]
+  },
+  {
+    "slug": "custom-networks",
+    "title": "Custom Networks",
+    "summary": "Visualise person-to-person and group-to-group collaboration networks.",
+    "category": "Networks",
+    "reportType": "RMarkdown",
+    "dataScope": "Sample data",
+    "complexity": "Advanced",
+    "tags": ["networks", "collaboration", "visualisation"],
+    "previews": [
+      { "title": "Person-to-person network", "html": "custom-network-p2p.html", "source": "custom-network-p2p.Rmd" },
+      { "title": "Group-to-group network", "html": "custom-network-g2g.html", "source": "custom-network-g2g.Rmd" }
+    ]
+  },
+  {
+    "slug": "exp-report",
+    "title": "Employee Experience Report",
+    "summary": "A flexdashboard template for exploring the Employee Experience Index.",
+    "category": "Employee experience",
+    "reportType": "Flexdashboard",
+    "dataScope": "User-provided data",
+    "complexity": "Intermediate",
+    "tags": ["employee experience", "dashboard", "index"],
+    "previews": [
+      { "title": "Employee experience demo", "html": "exp report demo.html", "source": "exp_report.Rmd" }
+    ]
+  },
+  {
+    "slug": "github-developer-experience",
+    "title": "GitHub Developer Experience",
+    "summary": "A synthetic dashboard illustrating relationships between developer experience, GitHub activity and Copilot.",
+    "category": "Copilot",
+    "reportType": "Flexdashboard",
+    "dataScope": "Synthetic",
+    "complexity": "Intermediate",
+    "tags": ["GitHub", "developer experience", "Copilot"],
+    "previews": [
+      { "title": "Developer productivity simulation", "html": "github-copilot-developer-productivity-simulation.html", "source": "github-copilot-developer-productivity-simulation.Rmd" }
+    ]
+  },
+  {
+    "slug": "information-value",
+    "title": "Information Value",
+    "summary": "Illustrate information-value calculations for candidate predictor variables.",
+    "category": "Analysis methods",
+    "reportType": "RMarkdown",
+    "dataScope": "Sample data",
+    "complexity": "Advanced",
+    "tags": ["information value", "predictors", "modelling"],
+    "previews": [
+      { "title": "Information value analysis", "html": "information-value.html", "source": "information-value.Rmd" }
+    ]
+  },
+  {
+    "slug": "meeting-engagement-drivers",
+    "title": "Meeting Engagement Drivers",
+    "summary": "Explore illustrative factors associated with meeting engagement.",
+    "category": "Collaboration",
+    "reportType": "RMarkdown",
+    "dataScope": "Synthetic",
+    "complexity": "Advanced",
+    "tags": ["meetings", "engagement", "random forest"],
+    "previews": [
+      { "title": "Meeting engagement drivers", "html": "meeting-engagement-drivers.html", "source": "meeting-engagement-drivers.Rmd" }
+    ]
+  },
+  {
+    "slug": "minimal-example",
+    "title": "Minimal Report",
+    "summary": "A small, practical starting point for building a standard RMarkdown report.",
+    "category": "Getting started",
+    "reportType": "RMarkdown",
+    "dataScope": "User-provided data",
+    "complexity": "Starter",
+    "tags": ["starter", "standard person query", "template"],
+    "previews": [
+      { "title": "Minimal report", "html": "minimal report.html", "source": "minimal.Rmd" }
+    ]
+  },
+  {
+    "slug": "pairwise-chi-square",
+    "title": "Pairwise Chi-Square",
+    "summary": "Run pairwise association tests across categorical person attributes.",
+    "category": "Analysis methods",
+    "reportType": "RMarkdown",
+    "dataScope": "Sample data",
+    "complexity": "Intermediate",
+    "tags": ["chi-square", "categorical data", "association"],
+    "previews": [
+      { "title": "Pairwise chi-square", "html": "pairwise_chisq.html", "source": "pairwise_chisq.Rmd" }
+    ]
+  },
+  {
+    "slug": "rtd-report",
+    "title": "Right to Disconnect",
+    "summary": "A dashboard for examining collaboration outside normal working hours.",
+    "category": "Collaboration",
+    "reportType": "Flexdashboard",
+    "dataScope": "User-provided data",
+    "complexity": "Intermediate",
+    "tags": ["right to disconnect", "after hours", "collaboration"],
+    "previews": [
+      { "title": "Right to disconnect demo", "html": "rtd report.html", "source": "rtd_report.Rmd" }
+    ]
+  },
+  {
+    "slug": "top-performers-random-forest",
+    "title": "Top Performers Random Forest",
+    "summary": "A training-only random-forest workflow with person-disjoint evaluation and synthetic labels.",
+    "category": "Analysis methods",
+    "reportType": "RMarkdown",
+    "dataScope": "Synthetic",
+    "complexity": "Advanced",
+    "tags": ["random forest", "modelling", "training"],
+    "previews": [
+      { "title": "Random forest workflow", "html": "top-performers-rf.html", "source": "top-performers-rf.Rmd" }
+    ]
+  }
+]

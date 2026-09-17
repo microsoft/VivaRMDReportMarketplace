@@ -49,3 +49,4 @@ templates/github-developer-experience/_data/github/
 templates/exp-report/exp report testing only.html
 templates/exp-report/exp report.html
 templates/exp-report/*.csv
+_site/
